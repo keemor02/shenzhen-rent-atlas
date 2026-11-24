@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>深圳租房探索雷达 · V2 原型</title>
+<style>{{v2/app.css}}</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>深圳租房探索雷达</h1>
+    <span class="ver-badge">V2 离线原型</span>
+    <span id="explore-progress" class="progress-pill"></span>
+  </div>
+  <div class="top-right">
+    <button type="button" id="macro-toggle" class="btn-ghost" aria-pressed="false">宏观背景</button>
+    <details id="data-help" class="help-pop">
+      <summary>口径与数据</summary>
+      <div class="help-body" id="data-help-body"></div>
+    </details>
+  </div>
+</header>
+
+<section class="control-bar" aria-label="核心找房条件">
+  <form id="work-form" class="ctrl-group ctrl-work">
+    <label for="work-input">工作地</label>
+    <div class="input-row">
+      <input id="work-input" type="text" list="work-options" autocomplete="off" placeholder="园区/地铁站，如 留仙洞、腾讯、科兴">
+      <datalist id="work-options"></datalist>
+      <button type="submit" class="btn-primary">设中心</button>
+    </div>
+    <div class="quick-row" id="quick-works"></div>
+  </form>
+
+  <label class="ctrl-group ctrl-sm">月租上限（元）
+    <input id="budget-input" type="number" min="500" max="100000" step="100" placeholder="不限">
+  </label>
+
+  <label class="ctrl-group ctrl-xs">居室
+    <select id="room-select">
+      <option value="1">一室/单间</option>
+      <option value="2">二室</option>
+      <option value="3">三室</option>
+      <option value="">不限</option>
+    </select>
+  </label>
+
+  <div class="ctrl-group ctrl-types" role="group" aria-label="接受的居住形态">
+    <span class="ctrl-label">居住形态（可多选）</span>
+    <div id="housing-type-chips" class="chip-row"></div>
+  </div>
+
+  <label class="ctrl-group ctrl-jump">直达片区/街道
+    <input id="place-jump" type="text" list="place-options" autocomplete="off" placeholder="搜 坪洲、西丽、白石洲…">
+    <datalist id="place-options"></datalist>
+  </label>
+</section>
+
+<div id="status-bar" class="status-bar" role="status"></div>
+
+<details id="more-filters" class="more-drawer">
+  <summary>更多条件（双地通勤 / 面积 / 出行方式 / 仅实采）<span id="extra-count"></span></summary>
+  <div class="more-grid">
+    <div class="ctrl-group">
+      <span class="ctrl-label">通勤方式</span>
+      <div class="seg-row" id="mode-seg">
+        <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
+        <button type="button" data-mode="bus" aria-pressed="false">公交</button>
+        <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
+      </div>
+    </div>
+    <label class="ctrl-group">单程上限：<strong id="limit-readout">50 分钟</strong>
+      <input id="limit-range" type="range" min="15" max="90" step="5" value="50">
+    </label>
+    <label class="ctrl-group">第二工作地（换工作安全垫）
+      <input id="work2-input" type="text" list="work-options" autocomplete="off" placeholder="选填，如 前海、科兴">
+    </label>
+    <label class="ctrl-group">第二程上限（分）
+      <input id="limit2-input" type="number" min="10" max="120" step="5" placeholder="不限">
+    </label>
+    <label class="ctrl-group">面积下限（㎡）
+      <input id="sqm-input" type="number" min="10" max="300" step="5" placeholder="不限">
+    </label>
+    <label class="ctrl-group">首末步行（分）
+      <div class="inline-pair">
+        <input id="access-input" type="number" min="0" max="40" value="5" title="出发到站步行">
+        <span>+</span>
+        <input id="egress-input" type="number" min="0" max="40" value="5" title="下车到岗步行">
+      </div>
+    </label>
+    <label class="ctrl-check">
+      <input id="verified-only" type="checkbox"> 仅看项目实采/官方保租房（不含参考带）
+    </label>
+    <label class="ctrl-check">
+      <input id="opp-only" type="checkbox"> 只看有「议价信号」片区
+    </label>
+    <button type="button" id="reset-all" class="btn-ghost">重置全部条件</button>
+  </div>
+</details>
+
+<nav class="view-tabs" id="view-tabs" role="tablist" aria-label="四大探索视角">
+  <button type="button" role="tab" data-view="explore" aria-selected="true">1. 探索与议价</button>
+  <button type="button" role="tab" data-view="commute" aria-selected="false">2. 双地通勤</button>
+  <button type="button" role="tab" data-view="livability" aria-selected="false">3. 宜居与避坑</button>
+  <button type="button" role="tab" data-view="watchlist" aria-selected="false">4. 看房清单 <span id="saved-count">0</span></button>
+  <div id="sub-controls" class="sub-controls"></div>
+</nav>
+
+<main id="workspace" class="workspace">
+  <section class="map-panel" id="map-panel" aria-label="探索地图">
+    <div class="map-head">
+      <nav id="breadcrumbs" class="crumbs" aria-label="位置层级"></nav>
+      <span id="hover-hud" class="hover-hud"></span>
+      <div class="map-actions">
+        <span id="match-summary" class="match-summary"></span>
+        <div id="layout-switch" class="seg-row seg-dark" hidden>
+          <button type="button" data-layout="geo" aria-pressed="true">街区图</button>
+          <button type="button" data-layout="radial" aria-pressed="false">10分钟时间圈</button>
+        </div>
+        <button type="button" id="btn-discover" class="btn-accent" hidden>发现下一处</button>
+      </div>
+    </div>
+
+    <div class="map-stage">
+      <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房探索地图，可缩放拖动"></svg>
+      <div class="zoom-box" id="zoom-box" aria-label="缩放控制">
+        <button type="button" data-zoom="in" title="放大">+</button>
+        <button type="button" data-zoom="out" title="缩小">−</button>
+        <button type="button" data-zoom="reset" title="全图">⛶</button>
+      </div>
+    </div>
+
+    <div class="map-foot">
+      <div id="map-legend" class="map-legend"></div>
+      <div class="map-credit">© OpenStreetMap 贡献者 · 交通快照 2026-11-23</div>
+    </div>
+  </section>
+
+  <aside class="detail-panel" id="detail-panel" aria-live="polite"></aside>
+</main>
+
+<section id="watchlist-view" class="watchlist-view" hidden></section>
+
+<script type="application/json" id="atlas-v2-data">{{data/atlas-v2.json}}</script>
+<script type="application/json" id="journey-data">{{data/journey.json}}</script>
+<script type="application/json" id="time-data">{{data/timing.json}}</script>
+<script>
+{{src/rail.js}}
+{{src/bus.js}}
+{{src/map-camera.js}}
+</script>
+<script>
+{{v2/store.js}}
+{{v2/engine.js}}
+{{v2/map.js}}
+{{v2/ui.js}}
+</script>
+</body>
+</html>

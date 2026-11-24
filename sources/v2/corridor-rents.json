@@ -1,0 +1,345 @@
+{
+  "version": 2,
+  "asOf": "2026-11-24",
+  "note": "核心通勤走廊分居住形态租金库。严格区分三类口径：(1) official_affordable 官方保租房配租通告基准价；(2) project 单个项目公开挂牌；(3) band 片区分业态市场行情参考带（供对比筛选，看房须核具体楼栋报价与水电标准）。",
+  "housingTypeMeta": {
+    "village": { "label": "城中村", "utility": "多为城中村自定/商业水电（看房必核电费单价，常见 0.9–1.5 元/度）" },
+    "oldEstate": { "label": "老小区", "utility": "多为民水民电、实用率高（重点看有无电梯与楼龄）" },
+    "modernEstate": { "label": "电梯小区", "utility": "规范物业、民水民电（留意物业费与停车位）" },
+    "apartment": { "label": "公寓/保租房", "utility": "保租房需核准入资格；商业公寓需核是否商水商电与管理费" }
+  },
+  "officialAffordableProjects": [
+    {
+      "id": "v2-chuangzhi-yuncheng",
+      "name": "创智云城4栋AB座（企业定向保租房）",
+      "district": "南山区",
+      "street": "西丽街道",
+      "station": "留仙洞",
+      "coord": [113.9385, 22.5782],
+      "housingTypes": ["apartment"],
+      "supplyUnits": 800,
+      "policyId": "ns-employer-2026-045",
+      "rents": [
+        { "type": "apartment", "room": 1, "low": 2090, "median": 2600, "high": 3110, "sqm": [43, 64], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（约800套，43-64㎡单间，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "apartment", "room": 2, "low": 4131, "median": 4400, "high": 4666, "sqm": [85, 96], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（85-96㎡两房，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+      ],
+      "livability": {
+        "pros": ["留仙洞总部基地核心，5/13号线双轨", "官方保租房基准价远低于周边商品房"],
+        "watchouts": ["面向南山企业定向申报，个人无法直接租", "非居改保项目需核水电与通风采光"]
+      }
+    },
+    {
+      "id": "v2-yunqi-yuanjing",
+      "name": "云启源境（企业定向保租房）",
+      "district": "南山区",
+      "street": "南头街道",
+      "station": "中山公园",
+      "coord": [113.9182, 22.5485],
+      "housingTypes": ["apartment"],
+      "supplyUnits": 410,
+      "policyId": "ns-employer-2026-045",
+      "rents": [
+        { "type": "apartment", "room": 1, "low": 2059, "median": 2059, "high": 2200, "sqm": [39, 39], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（287套约39㎡单间）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "apartment", "room": 2, "low": 3643, "median": 3643, "high": 3850, "sqm": [69, 69], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（82套约69㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "apartment", "room": 3, "low": 4699, "median": 4699, "high": 4950, "sqm": [89, 89], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（41套约89㎡三房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+      ],
+      "livability": {
+        "pros": ["近中山公园与南头古城生活圈", "410套集中供应形成南头一房/两房价格参照"],
+        "watchouts": ["面向南山区企业定向配租，需单位申请"]
+      }
+    },
+    {
+      "id": "v2-chiwanhui",
+      "name": "赤湾汇广场（企业定向保租房）",
+      "district": "南山区",
+      "street": "招商街道",
+      "station": "赤湾",
+      "coord": [113.8985, 22.4796],
+      "housingTypes": ["apartment"],
+      "supplyUnits": 100,
+      "policyId": "ns-employer-2026-045",
+      "rents": [
+        { "type": "apartment", "room": 1, "low": 2296, "median": 3097, "high": 3364, "sqm": [43, 63], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（43㎡单间至63㎡一房一厅）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "apartment", "room": 2, "low": 3952, "median": 4110, "high": 4272, "sqm": [74, 80], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（74-80㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+      ],
+      "livability": {
+        "pros": ["2/5号线双轨始发，有座通勤前海/蛇口"],
+        "watchouts": ["距科技园/留仙洞较远，临港区货车道路需看窗向"]
+      }
+    }
+  ],
+  "corridorBands": [
+    {
+      "key": "xixiang-pingzhou",
+      "district": "宝安区",
+      "street": "西乡街道",
+      "zones": ["zone-坪洲", "zone-西乡"],
+      "matchHoods": ["e-pingzhou", "west-haicheng", "west-mabu", "west-yantian", "west-lequn", "west-yuye", "west-bihaiyuan", "west-bihaiming", "west-antai"],
+      "period": "2026-11",
+      "sourceName": "2026 西乡/坪洲分形态行情汇总（安居客/58公开区间）",
+      "source": "https://sz.zf.58.com/zujin/xixiang/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1400, "median": 1950, "high": 2500, "sqm": [20, 35], "basis": "坪洲/西乡城中村单间及一房一厅参考带（步梯简装约1400起，近站精装一房约2000–2500）" },
+          { "room": 2, "low": 2400, "median": 2950, "high": 3500, "sqm": [42, 60], "basis": "坪洲/西乡城中村两房参考带" }
+        ],
+        "oldEstate": [
+          { "room": 1, "low": 2800, "median": 3400, "high": 4200, "sqm": [35, 50], "basis": "坪洲/西乡早期花园及统建小区一房参考带" },
+          { "room": 2, "low": 4200, "median": 5000, "high": 5800, "sqm": [60, 78], "basis": "坪洲/西乡成熟小区两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 3300, "median": 3900, "high": 4500, "sqm": [38, 52], "basis": "碧海/西乡次新花园小区一房参考带（多为民水民电）" },
+          { "room": 2, "low": 4800, "median": 5500, "high": 6500, "sqm": [65, 85], "basis": "碧海湾花园/富通城等正规小区两房参考带" },
+          { "room": 3, "low": 6200, "median": 7200, "high": 8500, "sqm": [85, 110], "basis": "碧海片区正规小区三房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "xixiang-gushu",
+      "district": "宝安区",
+      "street": "西乡街道",
+      "zones": ["zone-固戍"],
+      "matchHoods": ["west-hongwan", "west-shangwei", "west-xiawei", "west-shijie", "west-nanchang1", "west-nanchang2", "west-gushuyuan", "west-gushuting"],
+      "period": "2026-11",
+      "sourceName": "2026 固戍片区分形态行情汇总（安居客/58公开区间）",
+      "source": "https://sz.zf.58.com/zujin/gushu/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1000, "median": 1450, "high": 1850, "sqm": [18, 32], "basis": "固戍城中村（上/下围园、红湾、南昌）单间至一房一厅参考带，比坪洲低约150–300元" },
+          { "room": 2, "low": 2000, "median": 2600, "high": 3200, "sqm": [40, 58], "basis": "固戍城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 2400, "median": 3100, "high": 3800, "sqm": [35, 50], "basis": "固戍花园/固戍华庭/山海公馆等小区一房及商住参考带" },
+          { "room": 2, "low": 4600, "median": 5400, "high": 6400, "sqm": [65, 86], "basis": "固戍周边正规商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "nanshan-yuehai-dachong",
+      "district": "南山区",
+      "street": "粤海街道",
+      "matchHoods": ["e-dachong", "e-houhai"],
+      "period": "2026-11",
+      "sourceName": "2026 科技园/大冲分形态行情汇总（中原/房天下公开区间）",
+      "source": "https://sz.zf.58.com/zujin/kejiyuan/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 2300, "median": 3000, "high": 3800, "sqm": [20, 32], "basis": "大冲周边存量农民房/商住单间参考带" },
+          { "room": 2, "low": 4500, "median": 5500, "high": 6500, "sqm": [45, 62], "basis": "科技园周边老房/存量村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 5000, "median": 6000, "high": 7000, "sqm": [40, 55], "basis": "大冲新城花园/城市花园一房一厅参考带" },
+          { "room": 2, "low": 8500, "median": 10500, "high": 13000, "sqm": [68, 88], "basis": "大冲/高新园商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "nanshan-shahe-baishizhou",
+      "district": "南山区",
+      "street": "沙河街道",
+      "createPlace": { "id": "v2-baishizhou", "name": "白石洲 · 沙河片区", "station": "白石洲", "coord": [113.9722, 22.5415], "pros": ["1号线直达高新园仅2站，生活烟火气极足"], "watchouts": ["部分片区涉旧改施工围挡，看房需查所选楼栋旧改状态与电费"] },
+      "period": "2026-11",
+      "sourceName": "2026 白石洲分形态行情汇总（中原/公开挂牌区间）",
+      "source": "https://sz.zf.58.com/zujin/baishizhou/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1800, "median": 2400, "high": 3000, "sqm": [18, 32], "basis": "白石洲城中村单间/改造公寓参考带" },
+          { "room": 2, "low": 3500, "median": 4400, "high": 5500, "sqm": [42, 60], "basis": "白石洲城中村两房参考带" }
+        ],
+        "oldEstate": [
+          { "room": 2, "low": 6000, "median": 7500, "high": 9000, "sqm": [65, 85], "basis": "沙河街/世纪村等周边成熟小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "nanshan-nanyou",
+      "district": "南山区",
+      "street": "南山街道",
+      "createPlace": { "id": "v2-nanyou", "name": "南油 · 登良居住区", "station": "南油", "coord": [113.9278, 22.5175], "pros": ["9/12号线双轨，通达后海/前海/科技园/福田", "成熟居住区商业医疗齐备"], "watchouts": ["老小区与村屋混杂，步梯高层与停车位需现场确认"] },
+      "period": "2026-11",
+      "sourceName": "2026 南油/南山中心分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/nanyou/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 2000, "median": 2600, "high": 3200, "sqm": [20, 34], "basis": "登良村/向南村等城中村单间与一房参考带" },
+          { "room": 2, "low": 3800, "median": 4600, "high": 5500, "sqm": [45, 62], "basis": "南油周边城中村两房参考带" }
+        ],
+        "oldEstate": [
+          { "room": 1, "low": 3800, "median": 4600, "high": 5500, "sqm": [35, 50], "basis": "南油成熟老小区一房参考带" },
+          { "room": 2, "low": 6000, "median": 7200, "high": 8800, "sqm": [65, 85], "basis": "南油成熟小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "nanshan-xili",
+      "district": "南山区",
+      "street": "西丽街道",
+      "matchHoods": ["e-liuxian", "e-xili"],
+      "period": "2026-11",
+      "sourceName": "2026 西丽/留仙洞分形态行情汇总（叠加官方项目样本）",
+      "source": "https://sz.zf.58.com/zujin/xili/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1500, "median": 2100, "high": 2800, "sqm": [18, 34], "basis": "西丽/留仙洞周边城中村单间至一房参考带" },
+          { "room": 2, "low": 3000, "median": 3700, "high": 4500, "sqm": [42, 60], "basis": "西丽城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 3500, "median": 4500, "high": 5500, "sqm": [36, 52], "basis": "留仙洞/万科云城等品质小区一房参考带" },
+          { "room": 2, "low": 5500, "median": 7000, "high": 8800, "sqm": [65, 88], "basis": "西丽/留仙洞品质小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "baoan-xinan-fanshen",
+      "district": "宝安区",
+      "street": "新安街道",
+      "matchHoods": ["e-beer"],
+      "period": "2026-11",
+      "sourceName": "2026 宝安翻身/灵芝/宝中分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/xinan/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1200, "median": 1950, "high": 2600, "sqm": [18, 35], "basis": "翻身/灵芝/兴东城中村单间至一房一厅参考带" },
+          { "room": 2, "low": 2800, "median": 3500, "high": 4200, "sqm": [45, 62], "basis": "新安城中村两房参考带" }
+        ],
+        "oldEstate": [
+          { "room": 1, "low": 2600, "median": 3300, "high": 4000, "sqm": [35, 50], "basis": "翻身路/新安老楼梯小区一房参考带（多民水民电）" },
+          { "room": 2, "low": 4200, "median": 5300, "high": 6500, "sqm": [62, 82], "basis": "新安老小区两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 3500, "median": 4600, "high": 5800, "sqm": [38, 55], "basis": "宝安中心/灵芝次新商品小区一房参考带" },
+          { "room": 2, "low": 6000, "median": 7800, "high": 10000, "sqm": [68, 90], "basis": "宝安中心/灵芝商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "baoan-fuyong",
+      "district": "宝安区",
+      "street": "福永街道",
+      "matchHoods": ["e-fuyong"],
+      "period": "2026-11",
+      "sourceName": "2026 宝安福永分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/fuyong/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 900, "median": 1400, "high": 2000, "sqm": [20, 38], "basis": "福永白石厦/怀德/桥头城中村单间至一房参考带" },
+          { "room": 2, "low": 2000, "median": 2600, "high": 3200, "sqm": [48, 65], "basis": "福永城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 2200, "median": 2800, "high": 3500, "sqm": [38, 52], "basis": "福永正规商品小区一房参考带" },
+          { "room": 2, "low": 3500, "median": 4500, "high": 5500, "sqm": [68, 88], "basis": "福永正规商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "baoan-shajing",
+      "district": "宝安区",
+      "street": "沙井街道",
+      "createPlace": { "id": "v2-shajing", "name": "沙井 · 11号线沿线", "station": "沙井", "coord": [113.8285, 22.7252], "pros": ["11号线快线直达前海湾/南山/车公庙", "关外极致租金洼地"], "watchouts": ["通勤时间较长，部分工业区周边需核实环境与气味记录"] },
+      "period": "2026-11",
+      "sourceName": "2026 宝安沙井分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/shajing/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 800, "median": 1250, "high": 1800, "sqm": [20, 38], "basis": "沙井城中村单间至一房一厅参考带" },
+          { "room": 2, "low": 1800, "median": 2300, "high": 2800, "sqm": [48, 68], "basis": "沙井城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 2000, "median": 2700, "high": 3500, "sqm": [38, 54], "basis": "沙井海岸城/万科星城周边小区一房参考带" },
+          { "room": 2, "low": 3500, "median": 4600, "high": 5800, "sqm": [68, 88], "basis": "沙井商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "futian-meilin",
+      "district": "福田区",
+      "street": "梅林街道",
+      "matchHoods": ["e-meilin"],
+      "period": "2026-11",
+      "sourceName": "2026 福田上/下梅林分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/meilin/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1600, "median": 2500, "high": 3500, "sqm": [18, 35], "basis": "上/下梅林村单间至一房一厅参考带（近4/9号线）" },
+          { "room": 2, "low": 3500, "median": 4200, "high": 5000, "sqm": [45, 62], "basis": "梅林城中村两房参考带" }
+        ],
+        "oldEstate": [
+          { "room": 1, "low": 3800, "median": 4800, "high": 5800, "sqm": [38, 52], "basis": "梅林一村及周边成熟小区一房/公寓参考带" },
+          { "room": 2, "low": 6000, "median": 7500, "high": 9200, "sqm": [65, 88], "basis": "梅林成熟社区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "futian-shatou-shawei",
+      "district": "福田区",
+      "street": "沙头街道",
+      "createPlace": { "id": "v2-shawei", "name": "沙尾 · 上下沙片区", "station": "沙尾", "coord": [114.0488, 22.5218], "pros": ["7号线近车公庙与福田CBD", "餐饮夜生活极成熟"], "watchouts": ["城中村人口密度高，楼距窄楼层采光与噪音需现场看"] },
+      "period": "2026-11",
+      "sourceName": "2026 福田沙尾/上下沙分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/shawei/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1800, "median": 2900, "high": 4000, "sqm": [18, 34], "basis": "沙尾/上沙/下沙电梯城中村单间至一房参考带" },
+          { "room": 2, "low": 4000, "median": 4900, "high": 5800, "sqm": [45, 62], "basis": "沙尾/上下沙城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 5000, "median": 6200, "high": 7500, "sqm": [40, 55], "basis": "沙头片区商品小区一房参考带" },
+          { "room": 2, "low": 7500, "median": 9000, "high": 11000, "sqm": [68, 88], "basis": "绿景蓝湾半岛等商品小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "futian-jingtian",
+      "district": "福田区",
+      "street": "莲花街道",
+      "createPlace": { "id": "v2-jingtian", "name": "景田居住区", "station": "景田", "coord": [114.0423, 22.5553], "pros": ["2/9号线双轨，成熟安静花园社区，绿化与市政配套高"], "watchouts": ["极少城中村，整体起租门槛偏高"] },
+      "period": "2026-11",
+      "sourceName": "2026 福田景田分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/jingtian/",
+      "byType": {
+        "oldEstate": [
+          { "room": 1, "low": 4000, "median": 5200, "high": 6500, "sqm": [36, 52], "basis": "景田成熟小区一房/单身公寓参考带" },
+          { "room": 2, "low": 6500, "median": 7800, "high": 9500, "sqm": [65, 86], "basis": "景田花园小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "longhua-minzhi",
+      "district": "龙华区",
+      "street": "民治街道",
+      "createPlace": { "id": "v2-minzhi", "name": "民治 · 红山片区", "station": "民治", "coord": [114.0422, 22.6164], "pros": ["4/5/6号线枢纽辐射福田与深圳北，空间比关内宽敞"], "watchouts": ["4号线早高峰拥挤，近轨道楼栋需现场听车流与轨噪"] },
+      "period": "2026-11",
+      "sourceName": "2026 龙华民治分形态行情汇总",
+      "source": "https://sz.zf.58.com/zujin/minzhi/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1200, "median": 1950, "high": 2800, "sqm": [22, 38], "basis": "民治/樟坑/牛栏前城中村单间至一房参考带" },
+          { "room": 2, "low": 2800, "median": 3400, "high": 4000, "sqm": [48, 66], "basis": "民治城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 3000, "median": 3900, "high": 4800, "sqm": [38, 55], "basis": "金地梅陇镇/水榭春天等小区一房参考带" },
+          { "room": 2, "low": 4600, "median": 5600, "high": 6800, "sqm": [68, 88], "basis": "民治/红山品质小区两房参考带" }
+        ]
+      }
+    },
+    {
+      "key": "longgang-bantian",
+      "district": "龙岗区",
+      "street": "坂田街道",
+      "matchHoods": ["e-bantian"],
+      "period": "2026-11",
+      "sourceName": "2026 龙岗坂田分形态行情汇总（叠加单间让价观察）",
+      "source": "https://sz.zf.58.com/zujin/bantian/",
+      "byType": {
+        "village": [
+          { "room": 1, "low": 1100, "median": 1800, "high": 2600, "sqm": [22, 38], "basis": "五和/光雅园/杨美城中村电梯公寓单间至一房参考带" },
+          { "room": 2, "low": 2500, "median": 3100, "high": 3800, "sqm": [48, 66], "basis": "坂田城中村两房参考带" }
+        ],
+        "modernEstate": [
+          { "room": 1, "low": 2800, "median": 3500, "high": 4200, "sqm": [38, 54], "basis": "万科城/佳兆业城市广场等小区一房参考带" },
+          { "room": 2, "low": 4200, "median": 5300, "high": 6500, "sqm": [68, 88], "basis": "坂田商品小区两房参考带" }
+        ]
+      }
+    }
+  ]
+}
