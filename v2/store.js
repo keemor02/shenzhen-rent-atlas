@@ -9,8 +9,8 @@
   function createStore(onChange) {
     const state = {
       view: 'explore',          // explore | commute | livability | watchlist
-      subMode: 'rent',          // explore: rent | arbitrage | yoy; livability: all | park | market | supermarket | health | pharmacy; macro: districtRent | density
-      macroMode: '',            // '' | districtRent | density
+      subMode: 'rent',          // explore: rent | arbitrage | premium | yoy | mom; livability: all | mall | school | park | market | supermarket | health | pharmacy
+      macroMode: '',            // '' | community | apartment | village | listing | ref2022 | density
       layout: 'geo',            // geo | radial
       work: '',
       work2: '',
@@ -25,6 +25,10 @@
       housingTypes: ['village', 'oldEstate', 'modernEstate', 'apartment'],
       verifiedOnly: false,
       oppOnly: false,
+      usedHubs: [],             // 用户点击「我常去这个园区」的园区名称列表
+      riskFilter: '',           // '' 或 6 类公共事件之一 (works/air/rail/flight/crowd/noise)
+      referencePlaceId: '',     // 用户点击「设为参照」的片区 ID
+      weights: { commute: 1, rent: 1, environment: 1, convenience: 1 },
       selectedPlaceId: '',
       selectedStreetId: '',
       selectedDistrict: '',
@@ -93,7 +97,9 @@
         if (!s || typeof s !== 'object') return;
         if (['explore', 'commute', 'livability', 'watchlist'].includes(s.view)) state.view = s.view;
         if (typeof s.subMode === 'string') state.subMode = s.subMode;
-        if (['', 'districtRent', 'density'].includes(s.macroMode)) state.macroMode = s.macroMode;
+        const macroAliases = { districtRent: 'community' };
+        const mm = macroAliases[s.macroMode] ?? s.macroMode;
+        if (['', 'community', 'apartment', 'village', 'listing', 'ref2022', 'density'].includes(mm)) state.macroMode = mm;
         if (['geo', 'radial'].includes(s.layout)) state.layout = s.layout;
         if (typeof s.work === 'string') state.work = s.work;
         if (typeof s.work2 === 'string') state.work2 = s.work2;
@@ -108,6 +114,14 @@
         if (Array.isArray(s.housingTypes) && s.housingTypes.length) state.housingTypes = s.housingTypes;
         state.verifiedOnly = s.verifiedOnly === true;
         state.oppOnly = s.oppOnly === true;
+        if (Array.isArray(s.usedHubs)) state.usedHubs = [...new Set(s.usedHubs.filter(x => typeof x === 'string'))];
+        if (typeof s.riskFilter === 'string') state.riskFilter = s.riskFilter;
+        if (typeof s.referencePlaceId === 'string') state.referencePlaceId = s.referencePlaceId;
+        if (s.weights && typeof s.weights === 'object') {
+          for (const k of ['commute', 'rent', 'environment', 'convenience']) {
+            if ([1, 2, 3].includes(Number(s.weights[k]))) state.weights[k] = Number(s.weights[k]);
+          }
+        }
         if (typeof s.selectedPlaceId === 'string') state.selectedPlaceId = s.selectedPlaceId;
         if (typeof s.selectedStreetId === 'string') state.selectedStreetId = s.selectedStreetId;
         if (Array.isArray(s.seen)) state.seen = new Set(s.seen.filter(x => typeof x === 'string'));
@@ -125,6 +139,19 @@
       Object.assign(state, next);
       saveSession();
       if (!silent) onChange?.();
+    }
+
+    function toggleUsedHub(hubName) {
+      if (!hubName) return false;
+      const cur = new Set(state.usedHubs);
+      const added = !cur.has(hubName);
+      if (added) cur.add(hubName);
+      else cur.delete(hubName);
+      state.usedHubs = [...cur];
+      state.status = added ? `已标记常去「${hubName}」，该园区周边不再计入非必要溢价扣分。` : `已取消常去「${hubName}」。`;
+      saveSession();
+      onChange?.();
+      return added;
     }
 
     function getEntry(id) {
@@ -238,7 +265,7 @@
     loadSession();
 
     return {
-      state, patch, getEntry, isSaved, toggleSave, saveNote,
+      state, patch, toggleUsedHub, getEntry, isSaved, toggleSave, saveNote,
       exportBackup, importBackup, savedEntries, saveSession,
     };
   }

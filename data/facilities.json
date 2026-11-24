@@ -1,5 +1,6 @@
 {
   "asOf": "2026-11-24",
+  "osmFetchedAt": "2026-11-24T10:04:08Z",
   "facilities": [
     {
       "id": "market-ns-jiuxiangling-jieli",
@@ -656,6 +657,106 @@
       "sourceAttachment": "https://hsa.sz.gov.cn/attachment/1/1766/1766853/13060407.xlsx",
       "sourceLocator": "附件序号1741，国家零售药店代码 P44030605523",
       "matchNote": "登记地址同时写明街道和上围园新村。"
+    },
+    {
+      "id": "osm-relation-19740575",
+      "name": "宝安大仟里",
+      "category": "mall",
+      "address": "深圳市宝安区西乡街道海城路3号",
+      "streetId": "440306018000",
+      "hoodIds": [],
+      "source": "https://swj.sz.gov.cn/ztzl/swhjs/swllx/content/post_12328171.html",
+      "sourceName": "深圳市水务局 · 缤纷西乡线",
+      "sourceDate": "2025-08-13",
+      "checkedAt": "2026-11-24",
+      "matchNote": "市水务局记载西乡的大仟里购物中心。市文体旅游局图书馆名录第408项将商场定位在西乡街道海城路。门牌3号见同名 OSM 商场的地址标签。地图代表点落在西乡街道。",
+      "supplementarySource": "https://wtl.sz.gov.cn/ggfw/whl/tsgylb/index_21.html",
+      "osm": {
+        "type": "relation",
+        "id": 19740575,
+        "version": 1,
+        "editedAt": "2025-10-22T03:01:27Z",
+        "source": "https://www.openstreetmap.org/relation/19740575",
+        "credit": "© OpenStreetMap contributors",
+        "license": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      "location": {
+        "wgs84": [
+          113.8677624,
+          22.57340005
+        ],
+        "gcj02": [
+          113.8726785,
+          22.5703728
+        ],
+        "method": "几何外包框中心，经度在前"
+      }
+    },
+    {
+      "id": "osm-way-530348449",
+      "name": "深圳市宝安区坪洲小学",
+      "category": "school",
+      "address": "深圳市宝安区海城路237号",
+      "streetId": "440306018000",
+      "hoodIds": [],
+      "source": "https://www.sz.gov.cn/school/ba/baqxx/content/post_9465593.html",
+      "sourceName": "深圳市人民政府门户网站 · 公共企事业单位",
+      "sourceDate": "2021-12-20",
+      "checkedAt": "2026-11-24",
+      "matchNote": "政府学校页与 OSM 校园同名且门牌均为海城路237号。地图代表点落在西乡街道，项目收录的坪洲新村三个分期均在校园代表点之外。",
+      "osm": {
+        "type": "way",
+        "id": 530348449,
+        "version": 7,
+        "editedAt": "2026-05-06T17:08:28Z",
+        "source": "https://www.openstreetmap.org/way/530348449",
+        "credit": "© OpenStreetMap contributors",
+        "license": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      "location": {
+        "wgs84": [
+          113.8633996,
+          22.56675555
+        ],
+        "gcj02": [
+          113.8683246,
+          22.5637335
+        ],
+        "method": "几何外包框中心，经度在前"
+      }
+    },
+    {
+      "id": "osm-way-530348425",
+      "name": "深圳市宝安区碧海小学",
+      "category": "school",
+      "address": "深圳市宝安区西乡街道悦和路12号",
+      "streetId": "440306018000",
+      "hoodIds": [],
+      "source": "https://www.sz.gov.cn/school/ba/baqxx/content/post_9461647.html",
+      "sourceName": "深圳市人民政府门户网站 · 公共企事业单位",
+      "sourceDate": "2021-12-16",
+      "checkedAt": "2026-11-24",
+      "matchNote": "政府学校页明确写明西乡街道。OSM 校园的名称、悦和路及12号门牌均吻合。地图代表点落在西乡街道。",
+      "osm": {
+        "type": "way",
+        "id": 530348425,
+        "version": 5,
+        "editedAt": "2025-12-21T18:00:56Z",
+        "source": "https://www.openstreetmap.org/way/530348425",
+        "credit": "© OpenStreetMap contributors",
+        "license": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      "location": {
+        "wgs84": [
+          113.8477746,
+          22.5701233
+        ],
+        "gcj02": [
+          113.8527372,
+          22.5671265
+        ],
+        "method": "几何外包框中心，经度在前"
+      }
     }
   ]
 }

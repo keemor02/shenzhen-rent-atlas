@@ -1,4 +1,4 @@
-/* V2 4 视角交互控制器：探索与议价 / 双地通勤 / 宜居与避坑 / 看房清单 */
+/* V2 4 视角交互控制器：探索与议价（含非必要溢价/同比/环比）/ 双地通勤 / 宜居与避坑（含商场学校+6类图标）/ 看房清单 */
 (function (global) {
   'use strict';
 
@@ -8,7 +8,16 @@
     ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label || '来源')} ↗</a>`
     : '';
   const ROOM_LABEL = { 1: '一室/单间', 2: '二室', 3: '三室', 4: '四室' };
-  const FAC_CAT = { market: '菜市场', supermarket: '超市', health: '医疗/社康', park: '公园', pharmacy: '药店' };
+  const FAC_CAT = {
+    mall: '商场', school: '学校', park: '公园',
+    market: '菜市场', supermarket: '超市', health: '医疗/社康', pharmacy: '药店',
+  };
+  const PREMIUM_BADGE = {
+    'no-work': '先选工作地', direct: '可步行上班', used: '常去园区（免扣分）',
+    'no-hub': '园区圈外（避开多余溢价）', unknown: '差额待核', 'no-extra': '未见多付',
+    tradeoff: '通勤有取舍', premium: '存在非必要溢价',
+  };
+  const fmtDist = m => m < 100 ? `${Math.round(m)} 米` : `${(m / 1000).toFixed(1)} 公里`;
 
   function bootV2() {
     const $ = sel => document.querySelector(sel);
@@ -24,6 +33,7 @@
     const store = global.createV2Store(() => refresh());
     const state = store.state;
     map = global.createV2Map($('#atlas-svg'), atlas, engine, timing, esc);
+    const evIcons = global.V2EventIcons;
 
     // Populate static datalists and quick buttons
     $('#work-options').innerHTML = [...new Set([...(travel.workplaces || []), ...engine.nodes.keys(), ...Object.keys(engine.ALIASES)])]
@@ -37,10 +47,11 @@
 
     $('#data-help-body').innerHTML = `
       <p><strong>数据口径说明（截至 ${esc(atlas.asOf)}）：</strong></p>
-      <p>1. <strong>项目实采 / 官方保租基准</strong>：具体楼盘挂牌或住建局配租基准单价，精度最高。</p>
-      <p>2. <strong>分形态参考带</strong>：按「城中村 / 老小区 / 电梯小区 / 公寓」分开记录的片区月租区间，不把城中村和商品房混算，看房须核具体楼栋报价与水电标准。</p>
-      <p>3. <strong>议价雷达</strong>：结合大厂外迁/保租房分流事件 + 同通勤圈（±10分钟）同形态价差 + 商圈同比综合提示，每条均附原始依据与核实条件。</p>
-      <p>4. 收藏与踩点记录保存在当前浏览器（自动兼容旧版手记），可在「看房清单」随时导出 JSON 备份。</p>
+      <p>1. <strong>项目实采 / 官方保租基准</strong>：具体楼盘挂牌或住建局配租基准单价，地图显示精确单价。</p>
+      <p>2. <strong>分形态参考带</strong>：按「城中村 / 老小区 / 电梯小区 / 公寓」分开记录的片区月租区间，地图以<strong>点纹 + 区间（如 1.4–2.5k）</strong>标示，不把参考带伪装成单栋报价。</p>
+      <p>3. <strong>非必要溢价</strong>：识别距其他重点办公园区 15 分钟步行圈内、但你并不去该园区上班的住处；若同程（±5分钟）圈外至少有 3 处同口径样本且存在更便宜不减速的替代，则在适配分中扣 1–10 分；点「我常去这个园区」可立即取消扣分。</p>
+      <p>4. <strong>设施与避坑</strong>：共收录 ${atlas.facilities.length} 处官方核验设施（含商场/学校/公园/医疗等，带 OSM 坐标的点位支持 2 公里直线距离计算）及 ${atlas.publicEvents.length} 条 6 类公开避坑记录。</p>
+      <p>5. 收藏与踩点记录保存在当前浏览器（自动兼容旧版手记），可在「看房清单」导出 JSON 备份。</p>
     `;
 
     function syncInputsFromState() {
@@ -57,7 +68,10 @@
       $('#verified-only').checked = state.verifiedOnly;
       $('#opp-only').checked = state.oppOnly;
 
-      // Housing type multi-select chips
+      $$('[data-weight]').forEach(sel => {
+        sel.value = String(state.weights[sel.dataset.weight] || 1);
+      });
+
       const meta = atlas.housingTypeMeta;
       $('#housing-type-chips').innerHTML = Object.entries(meta).map(([k, info]) => {
         const on = state.housingTypes.includes(k);
@@ -78,6 +92,7 @@
         state.access !== 5 || state.egress !== 5,
         state.verifiedOnly,
         state.oppOnly,
+        Object.values(state.weights).some(v => v !== 1),
       ].filter(Boolean).length;
       $('#extra-count').textContent = extraCount ? `（已启用 ${extraCount} 项）` : '';
     }
@@ -85,10 +100,13 @@
     function renderSubControls() {
       const host = $('#sub-controls');
       if (state.macroMode) {
+        const macroBtns = [
+          ['community', '普通小区'], ['apartment', '集中式公寓'], ['village', '城中村单间'],
+          ['listing', '挂牌综合'], ['ref2022', '2022参考'], ['density', '人口密度'],
+        ];
         host.innerHTML = `<div class="seg-row">
-          <button type="button" data-macro="districtRent" aria-pressed="${state.macroMode === 'districtRent'}">各区普通小区均价</button>
-          <button type="button" data-macro="density" aria-pressed="${state.macroMode === 'density'}">各区人口密度</button>
-          <button type="button" data-macro="">返回探索地图</button>
+          ${macroBtns.map(([k, l]) => `<button type="button" data-macro="${k}" aria-pressed="${state.macroMode === k}">${l}</button>`).join('')}
+          <button type="button" data-macro="">返回探索</button>
         </div>`;
         return;
       }
@@ -96,7 +114,9 @@
         host.innerHTML = `<div class="seg-row">
           <button type="button" data-sub="rent" aria-pressed="${state.subMode === 'rent'}">分形态月租</button>
           <button type="button" data-sub="arbitrage" aria-pressed="${state.subMode === 'arbitrage'}">议价雷达</button>
-          <button type="button" data-sub="yoy" aria-pressed="${state.subMode === 'yoy'}">同比涨跌</button>
+          <button type="button" data-sub="premium" aria-pressed="${state.subMode === 'premium'}">非必要溢价</button>
+          <button type="button" data-sub="yoy" aria-pressed="${state.subMode === 'yoy'}">同比</button>
+          <button type="button" data-sub="mom" aria-pressed="${state.subMode === 'mom'}">环比</button>
         </div>`;
       } else if (state.view === 'livability') {
         host.innerHTML = `<div class="seg-row">
@@ -121,9 +141,53 @@
       $('#breadcrumbs').innerHTML = crumbs.join('');
     }
 
+    function renderPremiumBlock(row) {
+      const p = row.premium;
+      if (!p || (p.status === 'no-work' && state.subMode !== 'premium')) return '';
+      if (p.status === 'no-hub' && state.subMode !== 'premium' && !evalResult.work) return '';
+      const heading = p.status === 'premium' ? `同程高 ¥${Math.round(p.extra).toLocaleString('zh-CN')}/月` : (PREMIUM_BADGE[p.status] || p.status);
+      const near = p.status === 'direct' ? p.own : p.hub;
+      const walkLine = near ? `<p class="sub-note">邻近 <strong>${esc(near.name)}</strong>（约步行 ${near.walk} 分钟）· ${esc(p.reason)}</p>` : `<p class="sub-note">${esc(p.reason)}</p>`;
+      const altsHtml = p.alternatives?.length ? `<ul class="premium-alts">${p.alternatives.map(a =>
+        `<li><button type="button" data-pick-place="${esc(a.id)}">→ ${esc(a.name)}</button><span>${money(a.price)}/月 · ${a.minutes}分${a.future != null ? ' · 二地' + a.future + '分' : ''}</span></li>`
+      ).join('')}</ul>` : '';
+      const useBtn = p.hub && p.status !== 'direct'
+        ? `<div class="action-row" style="margin:6px 0 0"><button type="button" class="btn-ghost" data-toggle-hub="${esc(p.hub.name)}" aria-pressed="${p.status === 'used'}">${p.status === 'used' ? '✓ 已标记常去「' + esc(p.hub.name) + '」（点此取消）' : '我常去「' + esc(p.hub.name) + '」（取消溢价扣分）'}</button></div>`
+        : '';
+      return `<section class="premium-card" data-premium="${esc(p.status)}" aria-label="非必要溢价分析">
+        <div class="premium-head"><h3>非必要溢价</h3><span class="premium-badge">${esc(heading)}</span></div>
+        ${walkLine}${altsHtml}${useBtn}
+      </section>`;
+    }
+
+    function renderFitCard(row) {
+      const f = row.fit;
+      const dimsHtml = engine.FIT_KEYS.map(k => {
+        const d = f.dimensions[k];
+        const isWeak = d.score != null && d.score < 60;
+        return `<div class="fit-dim${isWeak ? ' weak' : ''}"><dt>${esc(engine.FIT_NAMES[k])}</dt><dd>${esc(d.value)}</dd></div>`;
+      }).join('');
+      const breakdownHtml = engine.FIT_KEYS.map(k => {
+        const d = f.dimensions[k];
+        return `<li>${esc(engine.FIT_NAMES[k])}：${d.score == null ? '待核' : Math.round(d.score) + ' 分'}（${esc(d.why)}）</li>`;
+      }).join('');
+      return `<section class="fit-card" aria-label="个人四维适配评分">
+        <div class="fit-head">
+          <h3>个人适配评分</h3>
+          <div><span class="fit-score">${esc(f.rangeText)}</span>${f.premiumPenalty ? `<span class="fit-penalty">含溢价扣分 −${f.premiumPenalty}</span>` : ''}</div>
+        </div>
+        <dl class="fit-grid">${dimsHtml}</dl>
+        <details class="fit-breakdown">
+          <summary>查看评分依据（缺项显示区间，权重可在「更多条件」调）</summary>
+          <ul>${breakdownHtml}</ul>
+        </details>
+      </section>`;
+    }
+
     function renderPlaceCard(row) {
       const p = row.place, entry = row.entry;
       const saved = store.isSaved(p.id);
+      const isRef = state.referencePlaceId === p.id;
       const arbClass = row.arbitrage.status === 'opportunity' ? 'good' : row.arbitrage.status === 'tight' ? 'warn' : '';
       const rentVal = row.rent ? (row.rent.low === row.rent.high ? money(row.rent.median) : `${money(row.rent.low)}–${money(row.rent.high)}`) : '待补';
       const commVal = evalResult.work ? (row.route ? `${row.route.minutes} 分钟` : '无路线') : '未设工作地';
@@ -132,6 +196,10 @@
         to: `${engine.nodes.get(evalResult.work).coord[0]},${engine.nodes.get(evalResult.work).coord[1]},${evalResult.work}`,
         mode: state.mode === 'drive' ? 'car' : 'bus',
       })}` : '';
+
+      const deltaHtml = evalResult.refRow && !isRef && row.refDeltas.length
+        ? `<div class="delta-strip"><span class="sub-note" style="margin:0;align-self:center">对比参照「${esc(evalResult.refRow.place.shortName)}」：</span>${row.refDeltas.map(d => `<span class="delta-chip ${d.better ? 'better' : 'worse'}">${esc(d.text)}</span>`).join('')}</div>`
+        : '';
 
       let tabBody = '';
       if (state.placeTab === 'overview') {
@@ -151,21 +219,31 @@
           (row.route ? `<p class="sub-note"><strong>${row.route.minutes} 分钟</strong> · ${esc(row.route.label)}（含步行约 ${row.route.walk} 分钟）${evalResult.work2 && row.route2 ? `<br>第二工作地 ${esc(evalResult.work2)}：<strong>${row.route2.minutes} 分钟</strong>` : ''} · ${lnk(navUrl, '高德核对')}</p>` : '<p class="sub-note">当前出行方式暂缺路线。</p>')
           : '';
 
+        const nearbyFacHtml = row.nearbyFacs.length
+          ? `<h3>2 公里内已定位设施（直线距离）</h3><ul class="simple-list">${row.nearbyFacs.map(f =>
+            `<li><strong>${esc(f.name)}</strong> <span class="tag">${esc(FAC_CAT[f.category] || f.category)} · 约 ${fmtDist(f.meters)}</span><p class="sub-note">${lnk(f.source, '政府资料')} · ${lnk(f.osmUrl, 'OSM 坐标')}</p></li>`
+          ).join('')}</ul>`
+          : '';
+
         const facCount = row.facilities.length || p.streetFacilityCount;
         const prosHtml = p.pros.length ? `<h3>住感亮点</h3><p class="sub-note">${p.pros.map(esc).join(' · ')}</p>` : '';
-        const watchHtml = (p.watchouts.length || row.risks.length) ? `<h3>看房必核避坑</h3><ul class="simple-list">${p.watchouts.map(w => `<li>⚠️ ${esc(w)}</li>`).join('')}${row.risks.map(rk => `<li>▲ <strong>${esc(rk.kind)}</strong>：${esc(rk.name)}（${esc(rk.observed)}）— ${esc(rk.check)} ${lnk(rk.url, rk.source)}</li>`).join('')}</ul>` : '';
+        const watchHtml = (p.watchouts.length || row.risks.length) ? `<h3>看房必核避坑</h3><ul class="simple-list">${p.watchouts.map(w => `<li>⚠️ ${esc(w)}</li>`).join('')}${row.risks.map(rk => {
+          const rt = evIcons.eventTypeFor(rk);
+          return `<li>${evIcons.eventIconSvg(rt)} <strong>${esc(rk.kind)}</strong>：${esc(rk.name)}（${esc(rk.observed)}）— ${esc(rk.check)} ${lnk(rk.url, rk.source)}</li>`;
+        }).join('')}</ul>` : '';
 
-        tabBody = `<div>${typeTags}${p.station ? `<span class="tag">近 ${esc(p.station)}站${p.walkMin ? ' 约步行' + p.walkMin + '分' : ''}</span>` : ''}${facCount ? `<span class="tag">核验设施 ${facCount} 处</span>` : ''}</div>
+        tabBody = `${renderFitCard(row)}${renderPremiumBlock(row)}
+          <div>${typeTags}${p.station ? `<span class="tag">近 ${esc(p.station)}站${p.walkMin ? ' 约步行' + p.walkMin + '分' : ''}</span>` : ''}${facCount ? `<span class="tag">核验设施 ${facCount} 处</span>` : ''}</div>
           <h3>分形态租金与口径</h3>
           ${rentItems ? `<ul class="rent-list">${rentItems}</ul>` : '<p class="sub-note">当前筛选条件下暂无匹配租金样本，可放宽形态或取消「仅实采」。</p>'}
-          ${routeBlock}${prosHtml}${watchHtml}`;
+          ${routeBlock}${nearbyFacHtml}${prosHtml}${watchHtml}`;
       } else if (state.placeTab === 'arbitrage') {
         const reasons = row.arbitrage.reasons.length
           ? `<ul class="simple-list">${row.arbitrage.reasons.map(r => `<li>✓ ${esc(r)}</li>`).join('')}</ul>`
           : '<p class="sub-note">暂未检测到明显的分流或价格洼地信号。</p>';
         const evList = row.events.map(ev => `<li><strong>${esc(ev.title)}</strong> <span class="tag">${esc(ev.type)} · ${esc(ev.date)}</span><p class="sub-note">${esc(ev.fact)}</p><p class="sub-note"><strong>判断：</strong>${esc(ev.summary)} ${lnk(ev.source, ev.sourceName)}</p></li>`).join('');
         const polList = row.policies.map(pol => `<li><strong>${esc(pol.title)}</strong> <span class="tag">${esc(pol.status)}</span><p class="sub-note">${esc(pol.subject)} · ${esc(pol.summary)}</p><p class="sub-note">发布 ${esc(pol.date)}${pol.applicationEnd ? ' · 截止 ' + esc(pol.applicationEnd) : ''} ${lnk(pol.source, pol.sourceName)}</p></li>`).join('');
-        tabBody = `<h3>议价雷达判断：${esc(row.arbitrage.label)}</h3>${reasons}
+        tabBody = `${renderPremiumBlock(row)}<h3>议价雷达判断：${esc(row.arbitrage.label)}</h3>${reasons}
           <h3>关联产业与供需事件（${row.events.length}）</h3>${evList ? `<ul class="simple-list">${evList}</ul>` : '<p class="sub-note">暂无直接关联事件。</p>'}
           <h3>本地配租与政策（${row.policies.length}）</h3>${polList ? `<ul class="simple-list">${polList}</ul>` : '<p class="sub-note">暂无本地项目批次公告。</p>'}`;
       } else {
@@ -182,6 +260,7 @@
       return `<p class="kicker">${esc([p.district, p.streetName, p.anchor].filter(Boolean).join(' · '))}</p>
         <h2>${esc(p.name)}</h2>
         ${row.exclusions.length ? `<p class="sub-note" style="color:var(--warm)">当前筛选未命中：${esc(row.exclusions.join('、'))}</p>` : ''}
+        ${deltaHtml}
         <div class="kpi-strip">
           <div class="kpi-box"><span>单程通勤</span><strong>${esc(commVal)}</strong></div>
           <div class="kpi-box"><span>参考月租</span><strong>${esc(rentVal)}</strong></div>
@@ -189,7 +268,8 @@
         </div>
         <div class="action-row">
           <button type="button" class="${saved ? 'btn-primary' : 'btn-ghost'}" data-toggle-save="${esc(p.id)}">${saved ? '★ 已在看房清单' : '☆ 加入看房清单'}</button>
-          ${p.streetId ? `<button type="button" class="btn-ghost" data-open-street="${esc(p.streetId)}">看同街道其他片区</button>` : ''}
+          <button type="button" class="btn-ghost" data-toggle-ref="${esc(p.id)}" aria-pressed="${isRef}">${isRef ? '◎ 已设为参照' : '◎ 设为参照对比'}</button>
+          ${p.streetId ? `<button type="button" class="btn-ghost" data-open-street="${esc(p.streetId)}">同街道</button>` : ''}
         </div>
         <div class="card-tabs" role="tablist">
           <button type="button" data-ptab="overview" aria-selected="${state.placeTab === 'overview'}">概览与租金</button>
@@ -207,8 +287,10 @@
           el.innerHTML = `<p class="kicker">宏观背景 · ${esc(d.n)}</p><h2>${esc(d.n)}</h2>
             <ul class="simple-list">
               <li>普通小区均价：<strong>${d.community?.price ?? '—'} 元/㎡·月</strong>（同比 ${d.community?.yoy_pct ?? '—'}%，环比 ${d.community?.mom_pct ?? '—'}%）</li>
+              <li>集中式公寓均价：<strong>${d.apartment?.price ?? '—'} 元/㎡·月</strong></li>
               <li>住宅挂牌综合：<strong>${d.listingPrice ?? '—'} 元/㎡·月</strong>（同比 ${d.listingYoy ?? '—'}%）</li>
               <li>城中村单间参考：<strong>${d.village?.range ? d.village.range.join('–') + ' 元/㎡·月' : '暂无分区样本'}</strong></li>
+              <li>2022 官方参考价：<strong>小区 ${d.refs2022?.[0] ?? '—'} / 公寓 ${d.refs2022?.[1] ?? '—'} / 城中村 ${d.refs2022?.[2] ?? '—'} 元/㎡·月</strong></li>
               <li>常住人口密度：<strong>${d.density.toLocaleString('zh-CN')} 人/km²</strong>（${d.pop} 万人 / ${d.area} km²）</li>
             </ul>
             <button type="button" class="btn-primary" data-macro="">切回地图细看片区</button>`;
@@ -221,7 +303,8 @@
       if (state.selectedRiskId) {
         const rk = engine.riskById.get(state.selectedRiskId);
         if (rk) {
-          el.innerHTML = `<p class="kicker">公开避坑记录 · ${esc(rk.kind)}</p><h2>${esc(rk.name)}</h2>
+          const rt = evIcons.eventTypeFor(rk);
+          el.innerHTML = `<p class="kicker">公开避坑记录 · ${evIcons.eventIconSvg(rt)} ${esc(rk.kind)}</p><h2>${esc(rk.name)}</h2>
             <p class="sub-note">状态：<strong>${esc(rk.status)}</strong> · 日期：${esc(rk.observed)}${rk.until ? ' · 截止 ' + esc(rk.until) : ''}</p>
             <p>${esc(rk.fact)}</p>
             <h3>看房踩点建议</h3><p>${esc(rk.check)}</p>
@@ -252,30 +335,57 @@
       if (selStreet) {
         const sum = evalResult.streetSummary.get(selStreet.id);
         const stFacs = atlas.facilities.filter(f => f.streetId === selStreet.id && (!FAC_CAT[state.subMode] || f.category === state.subMode));
+        const evHtml = sum.events.length ? `<h3>本街道关联事件（${sum.events.length}）</h3><ul class="simple-list">${sum.events.map(e => `<li><strong>${esc(e.title)}</strong> <span class="tag">${esc(e.signalLabel)}</span><p class="sub-note">${esc(e.summary)} ${lnk(e.source, e.sourceName)}</p></li>`).join('')}</ul>` : '';
+        const polHtml = sum.policies.length ? `<h3>本街道配租与政策（${sum.policies.length}）</h3><ul class="simple-list">${sum.policies.map(p => `<li><strong>${esc(p.title)}</strong> <span class="tag">${esc(p.status)}</span><p class="sub-note">${esc(p.summary)} ${lnk(p.source, p.sourceName)}</p></li>`).join('')}</ul>` : '';
         el.innerHTML = `<p class="kicker">${esc(selStreet.d)} · 行政街道</p><h2>${esc(selStreet.n)}</h2>
           <p class="sub-note">${selStreet.refUnit ? `官方历史参考单价 ${selStreet.refUnit} 元/㎡·月 · ` : ''}已收录 ${sum.members.length} 处片区 · 核验设施 ${selStreet.facilityCount} 处</p>
-          ${sum.members.length ? `<h3>街道内片区与小区</h3><ul class="place-btn-list">${sum.members.map(r => `<li><button type="button" data-pick-place="${esc(r.place.id)}">${esc(r.place.shortName)}${r.arbitrage.status === 'opportunity' ? ' <span class="tag tag-opp">议价</span>' : ''}</button><span class="meta">${r.rent ? money(r.rent.median) : '待补'}${r.route ? ' · ' + r.route.minutes + '分' : ''}</span></li>`).join('')}</ul>` : '<p class="sub-note">该街道暂无细化居住片区。</p>'}
-          ${stFacs.length ? `<h3>已核验周边设施（${stFacs.length}）</h3><ul class="simple-list">${stFacs.slice(0, 8).map(f => `<li><strong>${esc(f.name)}</strong> <span class="tag">${esc(FAC_CAT[f.category] || f.category)}</span><p class="sub-note">${esc(f.address)} ${lnk(f.source, f.sourceName)}</p></li>`).join('')}</ul>` : ''}`;
+          ${sum.members.length ? `<h3>街道内片区与小区</h3><ul class="place-btn-list">${sum.members.map(r => `<li><button type="button" data-pick-place="${esc(r.place.id)}">${esc(r.place.shortName)}${r.arbitrage.status === 'opportunity' ? ' <span class="tag tag-opp">议价</span>' : ''}${r.premium.status === 'premium' ? ' <span class="tag tag-tight">溢价</span>' : ''}</button><span class="meta">${r.rent ? (r.rent.grain === 'band' ? `${Math.round(r.rent.low / 100) / 10}–${Math.round(r.rent.high / 100) / 10}k` : money(r.rent.median)) : '待补'}${r.route ? ' · ' + r.route.minutes + '分' : ''}</span></li>`).join('')}</ul>` : '<p class="sub-note">该街道暂无细化居住片区。</p>'}
+          ${evHtml}${polHtml}
+          ${stFacs.length ? `<h3>已核验周边设施（${stFacs.length}）</h3><ul class="simple-list">${stFacs.slice(0, 10).map(f => `<li><strong>${esc(f.name)}</strong> <span class="tag">${esc(FAC_CAT[f.category] || f.category)}</span><p class="sub-note">${esc(f.address)} ${lnk(f.source, f.sourceName)}${f.osm?.source ? ' · ' + lnk(f.osm.source, 'OSM 坐标') : ''}</p></li>`).join('')}</ul>` : ''}`;
         return;
       }
 
-      // Default discovery list
+      // Default discovery lists
       if (state.view === 'livability') {
         const facStreets = atlas.streets.filter(s => s.facilityCount > 0).sort((a, b) => b.facilityCount - a.facilityCount);
+        const visibleRisks = atlas.publicEvents.filter(rk => !state.riskFilter || evIcons.eventTypeFor(rk) === state.riskFilter);
         el.innerHTML = `<h2>宜居设施与避坑雷达</h2>
-          <p class="sub-note">已核验 ${atlas.facilities.length} 处官方设施（覆盖 ${facStreets.length} 个核心街道）与 ${atlas.publicEvents.length} 条公开环境避坑点。</p>
+          <p class="sub-note">已核验 ${atlas.facilities.length} 处官方设施（含商场、学校、公园、医疗等，覆盖 ${facStreets.length} 个核心街道）与 ${atlas.publicEvents.length} 条 6 类公开避坑点。</p>
           <h3>已覆盖核验设施街道</h3>
           <ul class="place-btn-list">${facStreets.map(s => `<li><button type="button" data-open-street="${esc(s.id)}">${esc(s.d)} · ${esc(s.n)}</button><span class="meta">${s.facilityCount} 处设施</span></li>`).join('')}</ul>
-          <h3>公开避坑提醒（▲ 地图标记）</h3>
-          <ul class="place-btn-list">${atlas.publicEvents.map(rk => `<li><button type="button" data-pick-risk="${esc(rk.id)}">▲ ${esc(rk.name)}</button><span class="meta">${esc(rk.kind)}</span></li>`).join('')}</ul>`;
+          <h3>公开避坑提醒（${visibleRisks.length} 条）</h3>
+          <ul class="place-btn-list">${visibleRisks.map(rk => {
+            const rt = evIcons.eventTypeFor(rk);
+            return `<li><button type="button" data-pick-risk="${esc(rk.id)}">${evIcons.eventIconSvg(rt)} ${esc(rk.name)}</button><span class="meta">${esc(evIcons.EVENT_TYPES[rt].label)}</span></li>`;
+          }).join('')}</ul>`;
+        return;
+      }
+
+      if (state.view === 'explore' && state.subMode === 'premium') {
+        if (!evalResult.work) {
+          el.innerHTML = `<h2>非必要溢价诊断</h2><p class="sub-note">请先在上方设定你的<strong>工作地</strong>（如 留仙洞、企鹅岛），系统会自动找出哪些住处靠近「你并不去上班的园区」、却比同程圈外同形态更贵。</p>`;
+          return;
+        }
+        const premOrder = { premium: 0, tradeoff: 1, direct: 2, used: 2, unknown: 3, 'no-extra': 4, 'no-hub': 5 };
+        const sorted = evalResult.rows.filter(r => r.eligible).sort((a, b) =>
+          (premOrder[a.premium.status] ?? 9) - (premOrder[b.premium.status] ?? 9) ||
+          (b.premium.extra || 0) - (a.premium.extra || 0) ||
+          (a.route?.minutes ?? 999) - (b.route?.minutes ?? 999)
+        ).slice(0, 12);
+        el.innerHTML = `<h2>非必要溢价诊断（至 ${esc(evalResult.work)}）</h2>
+          <p class="sub-note">识别 15 分钟步行圈内靠近其他园区、且同程（±5分钟）存在更便宜替代的住处；若你常去某园区，可在卡片内点「我常去这个园区」取消扣分。</p>
+          <ul class="place-btn-list">${sorted.map(r => {
+            const tag = r.premium.status === 'premium' ? `高 ¥${Math.round(r.premium.extra)}` : (PREMIUM_BADGE[r.premium.status] || '');
+            return `<li><button type="button" data-pick-place="${esc(r.place.id)}">${esc(r.place.name)}</button><span class="meta">${esc(tag)}</span></li>`;
+          }).join('')}</ul>`;
         return;
       }
 
       const top = evalResult.eligibleRows.slice(0, 12);
       const heading = state.subMode === 'arbitrage' ? '优先议价机会片区' : evalResult.work ? `符合条件的推荐片区（${evalResult.eligibleRows.length}）` : '核心走廊可探索片区';
       el.innerHTML = `<h2>${esc(heading)}</h2>
-        <p class="sub-note">${evalResult.work ? `已按「议价信号 + 通勤 + 租金」排序。点任一片区看分形态价格带与砍价理由。` : '建议先在上方输入工作地（或点快捷园区），即可自动算通勤与同圈价差。'}</p>
-        ${top.length ? `<ul class="place-btn-list">${top.map(r => `<li><button type="button" data-pick-place="${esc(r.place.id)}">${esc(r.place.name)}${r.arbitrage.status === 'opportunity' ? ' <span class="tag tag-opp">议价</span>' : ''}</button><span class="meta">${r.route ? r.route.minutes + '分 · ' : ''}${r.rent ? money(r.rent.median) : '待补'}</span></li>`).join('')}</ul>` : '<p class="sub-note">当前条件过严，暂无命中片区。可点「更多条件 → 重置全部条件」。</p>'}`;
+        <p class="sub-note">${evalResult.work ? `已按「议价信号 + 适配分 + 通勤 + 租金」排序。点任一片区看分形态价格带、非必要溢价与砍价理由。` : '建议先在上方输入工作地（或点快捷园区），即可自动算通勤、适配评分与同圈价差。'}</p>
+        ${top.length ? `<ul class="place-btn-list">${top.map(r => `<li><button type="button" data-pick-place="${esc(r.place.id)}">${esc(r.place.name)}${r.arbitrage.status === 'opportunity' ? ' <span class="tag tag-opp">议价</span>' : ''}${r.premium.status === 'premium' ? ' <span class="tag tag-tight">溢价</span>' : ''}</button><span class="meta">${r.fit.count ? r.fit.rangeText + ' · ' : ''}${r.route ? r.route.minutes + '分' : ''}</span></li>`).join('')}</ul>` : '<p class="sub-note">当前条件过严，暂无命中片区。可点「更多条件 → 重置全部条件」。</p>'}`;
     }
 
     function renderWatchlist() {
@@ -285,11 +395,12 @@
       const picks = rows.filter(x => x.row).slice(0, 4);
 
       const compareHtml = picks.length >= 2 ? `<h3>核心候选横向对比（最多 4 处）</h3><div class="wl-table-wrap"><table class="wl-table"><thead><tr><th>维度</th>${picks.map(x => `<th><button type="button" class="btn-ghost" data-jump-place="${esc(x.row.place.id)}">${esc(x.row.place.shortName)}</button></th>`).join('')}</tr></thead><tbody>
-        <tr><th>所属街道</th>${picks.map(x => `<td>${esc(x.row.place.district + ' · ' + x.row.place.streetName)}</td>`).join('')}</tr>
+        <tr><th>适配评分</th>${picks.map(x => `<td><strong>${esc(x.row.fit.rangeText)}</strong>${x.row.fit.premiumPenalty ? `<br><span class="sub-note" style="color:var(--warm)">含溢价扣分 −${x.row.fit.premiumPenalty}</span>` : ''}</td>`).join('')}</tr>
         <tr><th>单程通勤</th>${picks.map(x => `<td>${evalResult.work ? (x.row.route ? `<strong>${x.row.route.minutes} 分</strong>（${esc(x.row.route.label)}）` : '待核') : '未设工作地'}${evalResult.work2 && x.row.route2 ? `<br>第二地 ${x.row.route2.minutes} 分` : ''}</td>`).join('')}</tr>
         <tr><th>分形态月租</th>${picks.map(x => `<td>${x.row.rent ? `<strong>${money(x.row.rent.low)}–${money(x.row.rent.high)}</strong><br><span class="sub-note">${esc(atlas.housingTypeMeta[x.row.rent.type]?.label || '综合')} · ${esc(engine.GRAIN_LABELS[x.row.rent.grain])}</span>` : '待补'}</td>`).join('')}</tr>
+        <tr><th>非必要溢价</th>${picks.map(x => `<td>${x.row.premium.status === 'premium' ? `<span class="tag tag-tight">同程高 ¥${Math.round(x.row.premium.extra)}</span>` : esc(PREMIUM_BADGE[x.row.premium.status] || '—')}</td>`).join('')}</tr>
         <tr><th>议价雷达</th>${picks.map(x => `<td><span class="tag ${x.row.arbitrage.status === 'opportunity' ? 'tag-opp' : ''}">${esc(x.row.arbitrage.label)}</span><div class="sub-note">${esc(x.row.arbitrage.reasons[0] || '常规供需')}</div></td>`).join('')}</tr>
-        <tr><th>核验设施/避坑</th>${picks.map(x => `<td>设施 ${x.row.facilities.length || x.row.place.streetFacilityCount} 处 · 避坑 ${x.row.risks.length} 条</td>`).join('')}</tr>
+        <tr><th>核验设施/避坑</th>${picks.map(x => `<td>2km定位 ${x.row.nearbyFacs.length} 处 · 街道 ${x.row.place.streetFacilityCount} 处 · 避坑 ${x.row.risks.length} 条</td>`).join('')}</tr>
         <tr><th>我的踩点实录</th>${picks.map(x => `<td>${x.entry.monthly ? `实谈 ${money(x.entry.monthly)}<br>` : ''}${x.entry.environment ? `环境${x.entry.environment}星 ` : ''}${x.entry.convenience ? `便利${x.entry.convenience}星` : ''}${x.entry.note ? `<div class="sub-note">${esc(x.entry.note)}</div>` : '未记'}</td>`).join('')}</tr>
       </tbody></table></div>` : '';
 
@@ -360,7 +471,7 @@
       renderDetailPanel();
     }
 
-    function selectPlace(id, fitCamera = true) {
+    function selectPlace(id, fitCamera = true, targetTab = 'overview') {
       const p = engine.placeById.get(id);
       if (!p) return;
       state.seen.add(id);
@@ -377,7 +488,7 @@
         selectedPlaceId: id,
         selectedStreetId: p.streetId || '',
         selectedRiskId: '',
-        placeTab: 'overview',
+        placeTab: targetTab,
         status: '',
       });
     }
@@ -415,6 +526,11 @@
     $('#egress-input').onchange = e => store.patch({ egress: Math.max(0, Number(e.target.value) || 0), status: '' });
     $('#verified-only').onchange = e => store.patch({ verifiedOnly: e.target.checked, status: '' });
     $('#opp-only').onchange = e => store.patch({ oppOnly: e.target.checked, status: '' });
+    $$('[data-weight]').forEach(sel => {
+      sel.onchange = () => {
+        store.patch({ weights: { ...state.weights, [sel.dataset.weight]: Number(sel.value) || 1 }, status: '' });
+      };
+    });
 
     $('#place-jump').onchange = e => {
       const q = e.target.value.trim();
@@ -431,7 +547,9 @@
       store.patch({
         budget: 0, room: '1', sqm: 0, mode: 'rail', limit: 50, work2: '', limit2: 0,
         access: 5, egress: 5, housingTypes: ['village', 'oldEstate', 'modernEstate', 'apartment'],
-        verifiedOnly: false, oppOnly: false, selectedPlaceId: '', selectedStreetId: '', selectedRiskId: '',
+        verifiedOnly: false, oppOnly: false, riskFilter: '', referencePlaceId: '',
+        weights: { commute: 1, rent: 1, environment: 1, convenience: 1 },
+        selectedPlaceId: '', selectedStreetId: '', selectedRiskId: '',
         status: '已重置全部筛选条件。',
       });
     };
@@ -443,7 +561,7 @@
       } else {
         if (map.camera.viewport().k > 2) microCamera = map.camera.snapshot();
         map.camera.reset();
-        store.patch({ macroMode: 'districtRent', status: '' });
+        store.patch({ macroMode: 'community', status: '' });
       }
     };
 
@@ -452,15 +570,42 @@
       if (!next) { store.patch({ status: '当前条件下的候选已全部探索完毕，可适当放宽预算或通勤上限。' }); return; }
       selectPlace(next.place.id, true);
       const tips = [];
-      if (state.budget && next.rent && next.rent.median < state.budget) tips.push(`中位月租比预算省 ${money(state.budget - next.rent.median)}`);
-      if (evalResult.work && next.route && next.route.minutes < state.limit) tips.push(`通勤比上限短 ${state.limit - next.route.minutes} 分钟`);
-      if (next.arbitrage.status === 'opportunity') tips.push('检测到议价机会');
+      if (evalResult.refRow && next.refDeltas.length) tips.push(...next.refDeltas.slice(0, 2).map(d => '比参照' + d.text));
+      else {
+        if (state.budget && next.rent && next.rent.median < state.budget) tips.push(`中位月租比预算省 ${money(state.budget - next.rent.median)}`);
+        if (evalResult.work && next.route && next.route.minutes < state.limit) tips.push(`通勤比上限短 ${state.limit - next.route.minutes} 分钟`);
+        if (next.arbitrage.status === 'opportunity') tips.push('检测到议价机会');
+      }
       store.patch({ status: `新发现 ${next.place.name}${tips.length ? '：' + tips.join('，') : ''}。` });
     };
 
     // Unified delegated click handler
     document.body.addEventListener('click', ev => {
-      const el = ev.target.closest('[data-quick-work],[data-htype],[data-mode],[data-view],[data-sub],[data-macro],[data-layout],[data-zoom],[data-crumb],[data-place],[data-street],[data-zone],[data-district],[data-risk],[data-pick-place],[data-open-street],[data-pick-dist],[data-pick-risk],[data-clear-risk],[data-toggle-save],[data-ptab],[data-jump-place]');
+      // Check zoomed-in 3-icon badge part click first!
+      const partEl = ev.target.closest('[data-insight-part]');
+      if (partEl) {
+        const { areaKind, areaId } = partEl.dataset;
+        if (areaKind === 'place') { selectPlace(areaId, false, 'arbitrage'); return; }
+        if (areaKind === 'street') { selectStreet(areaId); return; }
+        if (areaKind === 'zone') {
+          const z = atlas.zones.find(x => x.id === areaId);
+          if (z) { map.camera.fit(z.bounds); store.patch({ selectedStreetId: z.street, selectedPlaceId: '', status: '' }); }
+          return;
+        }
+      }
+      const badgeEl = ev.target.closest('[data-area-insight]');
+      if (badgeEl) {
+        const kind = badgeEl.dataset.areaInsight, id = badgeEl.dataset.areaId;
+        if (kind === 'place') { selectPlace(id, false); return; }
+        if (kind === 'street') { selectStreet(id); return; }
+        if (kind === 'zone') {
+          const z = atlas.zones.find(x => x.id === id);
+          if (z) { map.camera.fit(z.bounds); store.patch({ selectedStreetId: z.street, selectedPlaceId: '', status: '' }); }
+          return;
+        }
+      }
+
+      const el = ev.target.closest('[data-quick-work],[data-htype],[data-mode],[data-view],[data-sub],[data-macro],[data-layout],[data-zoom],[data-crumb],[data-place],[data-street],[data-zone],[data-district],[data-risk],[data-risk-filter],[data-pick-place],[data-open-street],[data-pick-dist],[data-pick-risk],[data-clear-risk],[data-toggle-save],[data-toggle-ref],[data-toggle-hub],[data-ptab],[data-jump-place]');
       if (!el) return;
       const d = el.dataset;
       if (d.quickWork) { store.patch({ work: d.quickWork, status: `已设工作地：${d.quickWork}` }); return; }
@@ -473,7 +618,9 @@
       }
       if (d.mode) { store.patch({ mode: d.mode, status: '' }); return; }
       if (d.view) {
-        const nextSub = d.view === 'explore' ? (['rent', 'arbitrage', 'yoy'].includes(state.subMode) ? state.subMode : 'rent') : d.view === 'livability' ? 'all' : state.subMode;
+        const nextSub = d.view === 'explore'
+          ? (['rent', 'arbitrage', 'premium', 'yoy', 'mom'].includes(state.subMode) ? state.subMode : 'rent')
+          : d.view === 'livability' ? 'all' : state.subMode;
         if (state.macroMode && microCamera) { map.camera.restore(microCamera); microCamera = null; }
         store.patch({ view: d.view, subMode: nextSub, macroMode: '', status: d.view === 'commute' && !evalResult.work ? '先在上方设定工作地，即可开启双地通勤与 10 分钟时间圈。' : '' });
         return;
@@ -494,15 +641,27 @@
       if (d.zone) { const z = atlas.zones.find(x => x.id === d.zone); if (z) { map.camera.fit(z.bounds); store.patch({ selectedStreetId: z.street, selectedPlaceId: '', status: '' }); } return; }
       if (d.district || d.pickDist) { store.patch({ selectedDistrict: d.district || d.pickDist, status: '' }); return; }
       if (d.risk || d.pickRisk) { store.patch({ selectedRiskId: d.risk || d.pickRisk, status: '' }); return; }
+      if (d.riskFilter !== undefined) {
+        const next = state.riskFilter === d.riskFilter ? '' : d.riskFilter;
+        store.patch({ riskFilter: next, status: next ? `仅显示「${evIcons.EVENT_TYPES[next]?.label}」避坑标记。` : '已显示全部 6 类避坑标记。' });
+        return;
+      }
       if ('clearRisk' in d) { store.patch({ selectedRiskId: '', status: '' }); return; }
       if (d.toggleSave) { const p = engine.placeById.get(d.toggleSave); store.toggleSave(d.toggleSave, p?.name || d.toggleSave); return; }
+      if (d.toggleRef) {
+        const next = state.referencePlaceId === d.toggleRef ? '' : d.toggleRef;
+        const p = engine.placeById.get(d.toggleRef);
+        store.patch({ referencePlaceId: next, status: next ? `已将「${p?.shortName || d.toggleRef}」设为参照，切看其他片区会自动对比通勤与租金差额。` : '已取消参照片区。' });
+        return;
+      }
+      if (d.toggleHub) { store.toggleUsedHub(d.toggleHub); return; }
       if (d.ptab) { store.patch({ placeTab: d.ptab }); return; }
     });
 
     // Hover HUD on map (zero redraw)
     const hud = $('#hover-hud');
     $('#atlas-svg').addEventListener('pointerover', ev => {
-      const t = ev.target.closest?.('[data-place],[data-street],[data-district],[data-risk]');
+      const t = ev.target.closest?.('[data-area-insight],[data-place],[data-street],[data-district],[data-risk]');
       hud.textContent = t?.getAttribute('aria-label') || '';
     });
     $('#atlas-svg').addEventListener('pointerleave', () => { hud.textContent = ''; });

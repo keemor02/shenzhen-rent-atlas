@@ -62,7 +62,7 @@
 <div id="status-bar" class="status-bar" role="status"></div>
 
 <details id="more-filters" class="more-drawer">
-  <summary>更多条件（双地通勤 / 面积 / 出行方式 / 仅实采）<span id="extra-count"></span></summary>
+  <summary>更多条件（双地通勤 / 面积 / 适配权重 / 仅实采）<span id="extra-count"></span></summary>
   <div class="more-grid">
     <div class="ctrl-group">
       <span class="ctrl-label">通勤方式</span>
@@ -91,6 +91,15 @@
         <input id="egress-input" type="number" min="0" max="40" value="5" title="下车到岗步行">
       </div>
     </label>
+    <div class="ctrl-group weights-group">
+      <span class="ctrl-label">四维适配权重</span>
+      <div class="weight-row">
+        <label class="weight-item">通勤<select data-weight="commute"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+        <label class="weight-item">租金<select data-weight="rent"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+        <label class="weight-item">环境<select data-weight="environment"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+        <label class="weight-item">便利<select data-weight="convenience"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+      </div>
+    </div>
     <label class="ctrl-check">
       <input id="verified-only" type="checkbox"> 仅看项目实采/官方保租房（不含参考带）
     </label>

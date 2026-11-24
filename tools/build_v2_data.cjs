@@ -386,7 +386,7 @@ for (const band of corridor.corridorBands) {
   });
 }
 
-// 4. Attach corridor bands & official reference unit prices to streets (74)
+// 4. Attach corridor bands, local policies & official reference unit prices to streets (74)
 const streets = fine.streets.map(s => {
   const band = findBandForStreet(s.d, s.n);
   const market = s.mid != null ? marketById[s.mid] : null;
@@ -397,6 +397,13 @@ const streets = fine.streets.map(s => {
       if (obs) trend[r] = { ...obs, marketName: market.name, url: market.url };
     }
   }
+  const stPolicyIds = (policiesData.policies || [])
+    .filter(p => (p.sites || []).some(site => site.streetId === s.id) || (p.scope === 'street' && (p.areaIds || []).includes(s.id)))
+    .map(p => p.id);
+  const stEventIds = [...new Set([
+    ...(s.events || []),
+    ...events.filter(ev => ev.streetId === s.id).map(ev => ev.id),
+  ])];
   return {
     id: s.id,
     n: s.n,
@@ -410,11 +417,12 @@ const streets = fine.streets.map(s => {
     trend,
     hasBand: !!band,
     facilityCount: facilities.filter(f => f.streetId === s.id).length,
-    eventIds: s.events || [],
+    eventIds: stEventIds,
+    policyIds: stPolicyIds,
   };
 });
 
-// 5. Compact districts summary
+// 5. Compact districts summary + verified office migration pairs
 const districts = base.districts.map(d => {
   const comm = base.apartment?.currentCommunity?.by_district?.[d.n] || null;
   const vil = base.villageRecent?.by_district?.[d.n] || null;
@@ -435,6 +443,14 @@ const districts = base.districts.map(d => {
   };
 });
 
+const migrations = [
+  { from: 'dachong', to: 'island', label: '科兴→企鹅岛' },
+  { from: 'houhai', to: 'guiwan', label: '后海→桂湾' },
+].map(m => {
+  const a = events.find(e => e.id === m.from), b = events.find(e => e.id === m.to);
+  return a && b ? { ...m, fromXy: a.xy, toXy: b.xy } : null;
+}).filter(Boolean);
+
 const atlasV2 = {
   version: 2,
   asOf: '2026-11-24',
@@ -446,6 +462,7 @@ const atlasV2 = {
   zones: fine.zones,
   places,
   events,
+  migrations,
   publicEvents,
   facilities,
   policies: policiesData.policies || [],
