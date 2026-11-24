@@ -169,6 +169,15 @@
 #game .saved-backup button,#game .saved-backup .backup-import {padding:3px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--fg);font:inherit;font-size:.75rem;cursor:pointer}
 #game .saved-backup button:hover,#game .saved-backup .backup-import:hover {border-color:var(--teal);color:var(--teal)}
 .place-search {width:10rem}
+.more-filters {margin:0 0 8px;font-size:.8125rem;color:var(--sub)}
+.more-filters>summary {cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:3px 0}
+#filter-badge:not(:empty) {color:var(--teal);font-weight:600}
+.topic-sep {display:inline-block;width:1px;background:var(--line);margin:4px 4px;align-self:stretch}
+.hover-hud {color:#e9e4c5;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46%}
+.hover-hud:empty {display:none}
+.probe-kpi {display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--fill);font-size:12px;font-variant-numeric:tabular-nums}
+.probe-kpi span {white-space:nowrap}
+.probe-kpi b {color:var(--fg)}
 .saved-matrix-scroll {overflow-x:auto;margin:6px 0 12px}
 #saved-matrix table {width:100%;border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums}
 #saved-matrix th,#saved-matrix td {padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}
@@ -267,6 +276,9 @@
   #game .mission .quick-dests {grid-column:2/-1;grid-row:1;justify-content:flex-end;margin:0;gap:3px}
   #game .mission .dest-entry {grid-column:1/-1;grid-row:2}
   #game .mission>label {grid-row:3;width:auto}
+  #game .mission>label.place-search {grid-row:4;grid-column:1/-1;width:auto}
+  .topic-sep {display:none}
+  .hover-hud {display:none}
   #game .mode-line {gap:4px 10px;padding-bottom:6px}
   #map-topics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:3px 0}
   #map-topics button {min-height:40px;padding:5px 2px}

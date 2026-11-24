@@ -1,7 +1,20 @@
 function resolveDestinationName(value,nodes,aliases){
   const name=String(value??'').trim();
+  if(!name)return '';
   const lookup=key=>nodes.has(key)?key:(Object.hasOwn(aliases,key)&&nodes.has(aliases[key])?aliases[key]:'');
-  return lookup(name)||lookup(name.replace(/(?:地铁站|站)$/u,''));
+  const stripped=name.replace(/(?:地铁站|站)$/u,'');
+  const exact=lookup(name)||lookup(stripped);
+  if(exact)return exact;
+  if(stripped.length<2)return '';
+  const matches=new Set();
+  for(const [k,v] of Object.entries(aliases||{})){
+    if(k.includes(stripped)&&nodes.has(v))matches.add(v);
+  }
+  const list=nodes instanceof Map?[...nodes.keys()]:[...nodes];
+  for(const n of list){
+    if(typeof n==='string'&&n.includes(stripped))matches.add(n);
+  }
+  return matches.size===1?[...matches][0]:'';
 }
 window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,focusMarket,districtFeed}){
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -25,7 +38,7 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
     const reading=observed(kind,id);
     return reading?{...reading,text:reading.label,state:'known'}:{value:null,label:'',text:'暂无同口径涨跌样本',state:'missing'};
   }
-  let insightFocus=null,insightOrigin=null,facilityOrigin=null;
+  let insightFocus=null,insightOrigin=null,facilityOrigin=null,microCamera=null,eventLegendOpen=false;
   const fit=window.RentalFit, fitView=makeFitView(esc);
   const sessionKey='shenzhen-rent-atlas.exploration.v1';
   const fieldIds=['budget','sqm','room','access','egress','corridor','second-dest','second-limit','time-limit'];
@@ -344,7 +357,11 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
     const reasons=r.exclusions||[];
     const filterStatus=reasons.length?' · '+(r.mapState==='outside'?'筛选外，':'')+esc(reasons.join('、')):'';
     r.facilityFacts=themes.facilities.facts(c);
-    let box='<h2>'+rowName(r)+'</h2><p class="place-location">'+esc(location)+filterStatus+'</p>'+
+    const areaInfo=c.hood?evidence.get('hood',c.hood.id):c.street?evidence.get('street',c.street.id):null;
+    const kpi='<div class="probe-kpi"><span>通勤 <b>'+(dest?(r.route?r.route.minutes+' 分钟':'待核'):'未选工作地')+'</b></span>'+
+      '<span>月租 <b>'+(p?.price?Number(p.price).toLocaleString('zh-CN')+' 元/月':'待核')+'</b></span>'+
+      (areaInfo?'<span>'+esc(areaInfo.outlook.label)+' · 事件 '+areaInfo.events.length+' · 政策 '+areaInfo.localPolicyCount+'</span>':'')+'</div>';
+    let box='<h2>'+rowName(r)+'</h2><p class="place-location">'+esc(location)+filterStatus+'</p>'+kpi+
       (showingTrend()?trendReading('hood',c.id):'')+fitView.card(r,opt,discoveryId===c.id);
     if(p?.price){
       const basis=[p.roomLabel||roomNames[p.room],p.unit,p.sqm?p.sqm+' ㎡':'',p.date].filter(Boolean).join(' · ');
@@ -479,7 +496,13 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
     return false;
   }
   function renderWorld(){
-    const el=$('#world-ledger'),legend=$('#event-legend');legend.hidden=!eventsOn;
+    const el=$('#world-ledger'),legend=$('#event-legend'),filterBtn=$('#event-filter-toggle');
+    if(filterBtn){
+      filterBtn.hidden=!eventsOn;
+      filterBtn.textContent=eventGroup?'事件：'+atlasEventTypes[eventGroup].label:'事件分类';
+      filterBtn.setAttribute('aria-expanded',String(eventsOn&&(eventLegendOpen||!!eventGroup)));
+    }
+    legend.hidden=!eventsOn||(!eventLegendOpen&&!eventGroup);
     if(!eventsOn){el.innerHTML='';legend.innerHTML='';return;}
     const types=new Set(publicEvents(false).map(atlasEventType));
     legend.innerHTML=Object.entries(atlasEventTypes).filter(([type])=>types.has(type)).map(([type,t])=>
@@ -520,7 +543,12 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
     $('#scope-chip').hidden=!scope||regional;$('#scope-chip').textContent=scope?scopeName()+' ×':'';
     if(scope)$('#scope-chip').setAttribute('aria-label','移除范围 '+scopeName());
     $('#play-controls').hidden=!dest;
-    $('#route-filters').hidden=layer!=='commute';$('#corridor-label').hidden=mode!=='rail';
+    $('#corridor-label').hidden=mode!=='rail';
+    const badge=$('#filter-badge');
+    if(badge){
+      const activeExtra=[opt.sqm>0,opt.access!==5,opt.egress!==5,!!opt.line,!!$('#second-dest').value.trim(),!!$('#second-limit').value.trim()].filter(Boolean).length;
+      badge.textContent=activeExtra?'（已设 '+activeExtra+' 项）':'';
+    }
     $('.stage-views').hidden=!dest||regional||fac||trend;
     $('#discover').hidden=!dest||regional||fac||trend;$('#discover').disabled=!rows.length;
     $('#limit-value').textContent=opt.limit+' 分钟';
@@ -580,6 +608,22 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
   }
   const matrixToggle=$('#saved-matrix-toggle');
   if(matrixToggle)matrixToggle.onclick=()=>{matrixOpen=!matrixOpen;renderSavedMatrix(options());};
+  const resetBtn=$('#reset-filters');
+  if(resetBtn)resetBtn.onclick=()=>{
+    $('#budget').value='';$('#sqm').value='';$('#room').value='1';
+    $('#access').value='5';$('#egress').value='5';$('#corridor').value='';
+    $('#second-dest').value='';$('#second-limit').value='';$('#only-saved').checked=false;
+    scope=null;eventGroup='';message='已重置全部筛选条件。';$('#dest-error').textContent='';
+    render(true);
+  };
+  const hoverHud=$('#hover-hud');
+  if(hoverHud){
+    $('#orbit').addEventListener('pointerover',e=>{
+      const target=e.target.closest?.('[data-block],[data-zone],[data-hood],[data-st],[data-district],[data-market-event],[data-ev],[data-area-insight]');
+      hoverHud.textContent=target?.getAttribute('aria-label')||'';
+    });
+    $('#orbit').addEventListener('pointerleave',()=>{hoverHud.textContent='';});
+  }
   $('.quick-dests').innerHTML=shortcuts.map(n=>'<button type="button" data-work="'+esc(n)+'">'+esc(n)+'</button>').join('');
   $('#dest-form').onsubmit=e=>{e.preventDefault();setDest($('#dest-input').value);};
   $('#time-limit').oninput=()=>render(true);
@@ -588,9 +632,24 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
   }
   function switchTopic(next){
     if(!themes.topics.includes(next))return;
+    const wasMacro=themes.isRegion()||themes.isMarket();
+    const willMacro=next==='districtRent'||next==='density'||next==='market';
     if((next==='districtRent'||next==='density')&&!themes.isRegion()){
       const location=districtName();
       if(location)topic.region=location;
+    }
+    if(!wasMacro&&willMacro){
+      const view=draw.camera.viewport();
+      if(view.k>2.2){
+        microCamera=draw.camera.snapshot();
+        const targetDist=topic.region||districtName();
+        const group=targetDist&&next!=='market'?data.streets.filter(s=>s.d===targetDist):[];
+        if(group.length)draw.camera.fit(atlasExtent(group.map(s=>s.bounds)));
+        else draw.camera.reset();
+      }
+    }else if(wasMacro&&!willMacro&&microCamera){
+      draw.camera.restore(microCamera);
+      microCamera=null;
     }
     insightFocus=null;insightOrigin=null;facilityOrigin=null;topic.layer=next;eventId='';message='';
     if(themes.isRegion()||themes.isMarket()||themes.isFacilities()||showingTrend())layout='geo';
@@ -716,7 +775,8 @@ window.initGame=function({base,data,travel,timing,facilities,policies,liveDrive,
     else if(t.dataset.mode){mode=t.dataset.mode;render(true);}
     else if(t.dataset.layout){layout=t.dataset.layout;render(false);}
     else if(t.id==='discover')discover();
-    else if(t.id==='event-toggle'){eventsOn=!eventsOn;if(!eventsOn)eventId='';render(true);}
+    else if(t.id==='event-toggle'){eventsOn=!eventsOn;if(!eventsOn){eventId='';eventLegendOpen=false;}render(true);}
+    else if(t.id==='event-filter-toggle'){eventLegendOpen=!eventLegendOpen;renderWorld();}
     else if(t.id==='back-probe'){eventId='';render(false);}
   });
   $('#orbit').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();const tag=e.target.closest('[data-area-insight],[data-work],[data-st],[data-ev],[data-block],[data-zone],[data-hood],[data-district],[data-market-event]');if(tag)tag.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});

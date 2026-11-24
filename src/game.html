@@ -1,28 +1,31 @@
 <main id="game">
   <div class="mission">
-    <form id="dest-form"><label for="dest-input">工作地</label><div class="dest-entry"><input type="text" autocomplete="off" id="dest-input" list="dest-options" placeholder="园区或地铁站" required><datalist id="dest-options"></datalist><button type="submit">确定</button></div></form>
+    <form id="dest-form"><label for="dest-input">工作地</label><div class="dest-entry"><input type="text" autocomplete="off" id="dest-input" list="dest-options" placeholder="园区、地铁站或简称" required><datalist id="dest-options"></datalist><button type="submit">确定</button></div></form>
     <label class="mission-budget">月租预算（元）<input id="budget" type="number" min="1" max="1000000" placeholder="不限"></label>
     <label>居室<select id="room"><option value="1">一室</option><option value="2">二室</option><option value="3">三室</option><option value="4">四室</option><option value="">不限</option></select></label>
-    <label>面积下限（㎡）<input id="sqm" type="number" min="1" max="1000" step="any" placeholder="不限"></label>
     <label class="place-search">搜片区/街道<input id="place-jump" type="text" list="place-options" autocomplete="off" placeholder="街道、片区或小区"></label><datalist id="place-options"></datalist>
     <div class="quick-dests" aria-label="常用工作地"></div>
   </div>
   <div id="dest-error" role="status"></div>
   <div id="play-controls" hidden>
     <div class="mode-line"><div class="mode-set" aria-label="通勤方式"><button data-mode="rail">地铁</button><button data-mode="bus">公交</button><button data-mode="drive">驾车</button></div><label class="range-label">单程 <strong id="limit-value">50 分钟</strong><input aria-label="单程时间上限" id="time-limit" type="range" value="50" min="10" max="90" step="5"></label></div>
-    <div id="route-filters" class="route-filters" hidden>
+  </div>
+  <details id="more-filters" class="more-filters"><summary>更多筛选<span id="filter-badge"></span></summary>
+    <div id="route-filters" class="route-filters">
+      <label>面积下限（㎡）<input id="sqm" type="number" min="1" max="1000" step="any" placeholder="不限"></label>
       <label>出发接驳（分）<input id="access" type="number" min="0" max="60" value="5"></label><label>到岗步行（分）<input id="egress" type="number" min="0" max="60" value="5"></label>
       <label id="corridor-label">经由线路<select id="corridor"><option value="">不限</option></select></label>
       <label>第二工作地<input id="second-dest" type="text" list="dest-options" autocomplete="off" placeholder="选填站点或园区"></label>
       <label>第二程上限（分）<input id="second-limit" type="number" min="1" max="240" placeholder="不限"></label>
+      <button type="button" id="reset-filters" class="subtle">重置筛选</button>
     </div>
-  </div>
+  </details>
   <div class="theme-band"><div id="map-topics" class="topic-row" role="group" aria-label="地图主题">
-    <button type="button" data-topic="rent" aria-pressed="true">片区月租</button><button type="button" data-topic="districtRent" aria-pressed="false">租金行情</button><button type="button" data-topic="density" aria-pressed="false">人口密度</button><button type="button" data-topic="market" aria-pressed="false">片区事件</button><button type="button" data-topic="commute" aria-pressed="false">通勤</button><button type="button" data-topic="convenience" aria-pressed="false">生活便利</button><button type="button" data-topic="environment" aria-pressed="false">环境</button><button type="button" data-topic="fit" aria-pressed="false">个人适配</button>
+    <button type="button" data-topic="rent" aria-pressed="true">片区月租</button><button type="button" data-topic="commute" aria-pressed="false">通勤</button><button type="button" data-topic="market" aria-pressed="false">片区事件</button><button type="button" data-topic="convenience" aria-pressed="false">生活便利</button><span class="topic-sep" aria-hidden="true"></span><button type="button" data-topic="districtRent" aria-pressed="false">租金行情</button><button type="button" data-topic="density" aria-pressed="false">人口密度</button><button type="button" data-topic="environment" aria-pressed="false">环境</button><button type="button" data-topic="fit" aria-pressed="false">个人适配</button>
   </div><div id="topic-options" hidden></div></div>
   <div class="play-layout"><section class="play-map" aria-label="探索地图">
-    <div class="stage-head"><nav id="map-crumbs" aria-label="当前地图范围"></nav><span id="stage-title"></span>
-      <div class="map-switches"><button id="scope-chip" type="button" hidden></button><button id="event-toggle" type="button" aria-pressed="true">公共事件</button><div class="stage-views" hidden><button data-layout="geo">街区</button><button data-layout="radial">时间圈</button></div></div></div>
+    <div class="stage-head"><nav id="map-crumbs" aria-label="当前地图范围"></nav><span id="stage-title"></span><span id="hover-hud" class="hover-hud"></span>
+      <div class="map-switches"><button id="scope-chip" type="button" hidden></button><button id="event-toggle" type="button" aria-pressed="true">公共事件</button><button id="event-filter-toggle" type="button" aria-expanded="false" hidden>事件分类</button><div class="stage-views" hidden><button data-layout="geo">街区</button><button data-layout="radial">时间圈</button></div></div></div>
     <div class="map-canvas"><svg id="orbit" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳探索地图，可缩放、拖动及用方向键平移"></svg>
       <div class="map-zoom" id="game-zoom" aria-label="地图视野"><button type="button" data-zoom="in" aria-label="放大" title="放大">+</button><button type="button" data-zoom="out" aria-label="缩小" title="缩小">−</button><button type="button" data-zoom="reset" aria-label="全图" title="全图">⛶</button></div></div>
     <div class="stage-foot"><div id="stage-key" aria-label="地图图例"></div><button type="button" id="discover" hidden>发现下一处</button></div>

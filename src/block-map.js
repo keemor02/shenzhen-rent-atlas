@@ -312,7 +312,7 @@ function makeBlockMap(svg,base,data,esc,repaint,enabled) {
       const [x,y]=point;
       layer.push('<text class="area-name" x="'+fmt(x)+'" y="'+fmt(y+4)+'" text-anchor="middle">'+esc(item.name)+'</text>');return true;
     }
-    const labelLimit=w<480?3:6,richLabels=[],namedAreas=new Set();
+    const labelLimit=k>=4?(w<480?6:12):(w<480?3:6),richLabels=[],namedAreas=new Set();
     const westernStreets=new Set(west.shown?(data.zones||[]).map(z=>z.street):[]);
     const order=visible.map(street=>({street,site:atlasLabelShape(street,street.xy).best})).sort((a,b)=>
       Number(b.street===selected)-Number(a.street===selected)||

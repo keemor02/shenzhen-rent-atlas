@@ -133,3 +133,18 @@ test('OSM sync pipeline transforms WGS-84 to GCJ-02, matches Shenzhen streets, a
   assert.equal(mall.checkedAt, null);
   assert.equal(mall.syncedAt, '2026-11-24T05:21:00+08:00');
 });
+
+test('resolveDestinationName supports unambiguous keyword matching without false positives', () => {
+  const ctx = vm.createContext({ window: {} });
+  vm.runInContext(read('src/game.js'), ctx);
+  const nodes = new Set(['企鹅岛', '坂田华为总部', '大疆天空之城', '科兴科学园', '西丽', '西乡']);
+  const aliases = { '腾讯企鹅岛': '企鹅岛', '腾讯岛': '企鹅岛', '华为总部': '坂田华为总部', '大疆': '大疆天空之城' };
+  const resolve = s => ctx.resolveDestinationName(s, nodes, aliases);
+  assert.equal(resolve('腾讯'), '企鹅岛');
+  assert.equal(resolve('华为'), '坂田华为总部');
+  assert.equal(resolve('天空之城'), '大疆天空之城');
+  assert.equal(resolve('科兴'), '科兴科学园');
+  // Ambiguous single char or multi-match stays empty
+  assert.equal(resolve('西'), '');
+  assert.equal(resolve('不存在园区'), '');
+});
