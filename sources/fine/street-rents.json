@@ -1,0 +1,220 @@
+{
+  "method": "行政街道口径，不含58商圈。综合均价适用于珊瑚城中村样本，住宅挂牌均价适用于禧泰挂牌样本。yoy、mom为百分数，缺失时不回填。",
+  "records": [
+    {
+      "district": "南山区",
+      "name": "西丽",
+      "street": "西丽街道",
+      "type": "城中村综合租金",
+      "asof": "2026-Q1",
+      "price": 60.06,
+      "yoy": null,
+      "mom": null,
+      "sample": null,
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "龙华区",
+      "name": "民治",
+      "street": "民治街道",
+      "type": "城中村综合租金",
+      "asof": "2026-Q1",
+      "price": 51.03,
+      "yoy": null,
+      "mom": null,
+      "sample": null,
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "光明区",
+      "name": "公明",
+      "street": "公明街道",
+      "type": "城中村综合租金",
+      "asof": "2026-Q1",
+      "price": 30.5,
+      "yoy": null,
+      "mom": null,
+      "sample": null,
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "光明区",
+      "name": "玉塘",
+      "street": "玉塘街道",
+      "type": "城中村综合租金",
+      "asof": "2026-Q1",
+      "price": 34.08,
+      "yoy": null,
+      "mom": null,
+      "sample": null,
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "宝安区",
+      "name": "西乡",
+      "street": "西乡街道",
+      "type": "住宅挂牌均价",
+      "asof": "2026-10",
+      "price": 78.25,
+      "yoy": null,
+      "mom": 2.13,
+      "avg_total": 6133,
+      "sample": 57,
+      "unit": "元/㎡·月",
+      "source": "https://m.creprice.cn/town/0004675021.html?city=sz&type=lease"
+    },
+    {
+      "district": "南山区",
+      "name": "桃源",
+      "street": "桃源街道",
+      "type": "住宅挂牌均价",
+      "asof": "2026-10",
+      "price": 102.95,
+      "yoy": null,
+      "mom": 6.5,
+      "avg_total": 8171,
+      "sample": 7,
+      "unit": "元/㎡·月",
+      "source": "https://m.creprice.cn/town/0003362671.html?city=sz&type=lease"
+    }
+  ],
+  "groups": [
+    {
+      "district": "福田区",
+      "streets": [
+        "南园街道",
+        "莲花街道"
+      ],
+      "range": [
+        80.58,
+        81.06
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "福田区",
+      "streets": [
+        "福田街道",
+        "福保街道",
+        "沙头街道",
+        "梅林街道",
+        "华富街道"
+      ],
+      "range": [
+        70.58,
+        74.0
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "南山区",
+      "streets": [
+        "沙河街道",
+        "蛇口街道",
+        "招商街道",
+        "粤海街道"
+      ],
+      "range": [
+        71,
+        81.5
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "南山区",
+      "streets": [
+        "南头街道",
+        "南山街道",
+        "桃源街道"
+      ],
+      "range": [
+        66.43,
+        67.43
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "龙华区",
+      "streets": [
+        "龙华街道",
+        "大浪街道",
+        "观湖街道"
+      ],
+      "range": [
+        37.26,
+        41.77
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "龙华区",
+      "streets": [
+        "福城街道",
+        "观澜街道"
+      ],
+      "range": [
+        33.35,
+        34.68
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "光明区",
+      "streets": [
+        "玉塘街道",
+        "凤凰街道",
+        "光明街道"
+      ],
+      "range": [
+        32.85,
+        34.08
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    },
+    {
+      "district": "光明区",
+      "streets": [
+        "马田街道",
+        "新湖街道"
+      ],
+      "range": [
+        31.9,
+        32.74
+      ],
+      "type": "同一组街道的城中村综合均价范围，不能逐一绑定数值",
+      "asof": "2026-Q1",
+      "unit": "元/㎡·月",
+      "source": "https://news.szhome.com/394118.html"
+    }
+  ],
+  "sources": [
+    "https://news.szhome.com/394118.html",
+    "https://m.creprice.cn/town/0004675021.html?city=sz&type=lease",
+    "https://m.creprice.cn/town/0003362671.html?city=sz&type=lease"
+  ]
+}

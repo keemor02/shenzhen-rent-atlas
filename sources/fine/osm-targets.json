@@ -1,0 +1,42 @@
+{
+  "description": "深圳租房地图 OSM / Overpass 同步目标区配置（边界为 WGS-84 经纬度 [south, west, north, east]）",
+  "overpassEndpoint": "https://overpass-api.de/api/interpreter",
+  "geofabrikStateUrl": "https://download.geofabrik.de/asia/china/guangdong/updates/state.txt",
+  "targets": [
+    {
+      "id": "xixiang",
+      "name": "宝安 · 西乡街道（西乡/坪洲/固戍）",
+      "district": "宝安区",
+      "streetId": "440306018000",
+      "bbox": [22.553, 113.835, 22.608, 113.885]
+    },
+    {
+      "id": "xili",
+      "name": "南山 · 西丽街道（留仙洞/九祥岭/官龙）",
+      "district": "南山区",
+      "streetId": "440305009000",
+      "bbox": [22.562, 113.922, 22.605, 113.972]
+    },
+    {
+      "id": "xinan",
+      "name": "宝安 · 新安街道（宝中/翻身/灵芝/兴东）",
+      "district": "宝安区",
+      "streetId": "440306001000",
+      "bbox": [22.542, 113.872, 22.592, 113.928]
+    },
+    {
+      "id": "yuehai",
+      "name": "南山 · 粤海街道（科兴/高新园/后海）",
+      "district": "南山区",
+      "streetId": "440305007000",
+      "bbox": [22.508, 113.918, 22.562, 113.962]
+    },
+    {
+      "id": "nantou",
+      "name": "南山 · 南头街道（南头古城/前海湾北）",
+      "district": "南山区",
+      "streetId": "440305001000",
+      "bbox": [22.528, 113.892, 22.566, 113.936]
+    }
+  ]
+}

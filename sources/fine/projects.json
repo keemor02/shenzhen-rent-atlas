@@ -1,0 +1,493 @@
+{
+  "as_of": "2026-11-23",
+  "method": "居室类项目数据来自安居客页面，注明板块榜单、项目页或单套挂牌三种口径；没有固定房号、面积的基期，未报告项目同比。11月尚未结束。平台板块同比单列在boards中。",
+  "coordinate_note": "coordinates字段均是高德GCJ02站点片区锚点，不代表项目楼栋坐标。",
+  "cases": [
+    {
+      "id": "bafanshen",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "翻身村",
+      "station": "翻身",
+      "category": "城中村",
+      "admin_source": "https://mzj.sz.gov.cn/szmz/pc/bmxx/mzfwzy/ylfw/gllrjt/content/post_8748265.html",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 1680,
+          "mom": 6.33,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/baoanzhongxinquba/"
+        },
+        {
+          "period": "2026-11-23",
+          "rooms": "一室",
+          "sqm": 20,
+          "price": 1100,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "单套合租房间挂牌，未核独用面积，不能与整租直接对比。",
+          "source": "https://sz.zu.anjuke.com/fangyuan/4850022881879040"
+        }
+      ],
+      "event": "平台将翻身村划入宝安中心区商圈。",
+      "expectation": "城中村低总价房应先区分房间合租、独立整租，再看当月挂牌升幅能否反映在本栋新签价。",
+      "context_sources": [],
+      "coordinates": [
+        113.893232,
+        22.55969
+      ]
+    },
+    {
+      "id": "baqixing",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "洪浪北 · 七星创意工场",
+      "station": "洪浪北",
+      "category": "园区单间",
+      "admin_source": "https://sz.zu.anjuke.com/rmss/chuzu-195-xinanlu/",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 1650,
+          "mom": -16.67,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xinanlu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "一室",
+          "sqm": 25,
+          "price": 1600,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/rmss/chuzu-195-xinanlu/"
+        }
+      ],
+      "event": "园区在创业二路北二巷，挂牌的25㎡单间带阳台。",
+      "expectation": "适合在洪浪北、兴东找低总价单间的人。本轮下行可作询价线索，签约前可对照同楼层和水电、管理费。",
+      "context_sources": [],
+      "coordinates": [
+        113.910585,
+        22.574543
+      ]
+    },
+    {
+      "id": "baojoy",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "灵芝 · 大悦城印悦",
+      "station": "灵芝",
+      "category": "商务公寓",
+      "admin_source": "https://imgcloud.leyoujia.com/jjsxm/jjsxm/2025-12/31/17/FnxLpE9qghipidY_Gmh2n5Tyzu38.pdf",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 6800,
+          "mom": 0,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xinanlu/"
+        },
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "二室",
+          "price": 7800,
+          "mom": 8.33,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xinanlu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "一室一厅",
+          "sqm": 58,
+          "price": 6500,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/rmss/chuzu-195-xinanlu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "二室二厅",
+          "sqm": 85,
+          "price": 8000,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/rmss/chuzu-195-xinanlu/"
+        }
+      ],
+      "event": "大悦城购物中心2025年7月开业。宝安区预售证记载大悦城商业中心该批次为商务公寓。",
+      "expectation": "同盘一室与二室的月度变化不同。是否愿付站上公寓的便利溢价，可先对照灵芝附近的小区整租。",
+      "context_sources": [
+        "https://www.sz.gov.cn/cn/xxgk/zfxxgj/gqdt/content/post_12327188.html",
+        "https://imgcloud.leyoujia.com/jjsxm/jjsxm/2025-12/31/17/FnxLpE9qghipidY_Gmh2n5Tyzu38.pdf"
+      ],
+      "coordinates": [
+        113.904158,
+        22.568964
+      ]
+    },
+    {
+      "id": "baxinlake",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "新安公园 · 新安湖花园二三期",
+      "station": "新安公园",
+      "category": "住宅小区",
+      "admin_source": "https://wsbs.sz.gov.cn/shenzhen/project/phoneGuide?code=90000500145577025514440306",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 4117,
+          "mom": 12.18,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客项目页的今日均价及较上月变动；板块排行榜采用另一数值，本记录用项目页口径。",
+          "source": "https://sz.zu.anjuke.com/xiaoqu/915474/zujin/"
+        },
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "二室",
+          "price": 6040,
+          "mom": -0.13,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "同一项目页均价及较上月变动。",
+          "source": "https://sz.zu.anjuke.com/xiaoqu/915474/zujin/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "二室二厅",
+          "sqm": 81,
+          "price": 6200,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/xiaoqu/915474/zujin/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "二室二厅",
+          "sqm": 81,
+          "price": 6000,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/xiaoqu/915474/zujin/"
+        }
+      ],
+      "event": "同盘两条81㎡两居挂牌分别为6000、6200元。",
+      "expectation": "对整租两房而言，这两条同面积挂牌比跨户型比较更接近；同一套房上年续租价仍未取得。",
+      "context_sources": [],
+      "coordinates": [
+        113.910883,
+        22.562303
+      ]
+    },
+    {
+      "id": "baxingdong",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "兴东 · 中粮创芯公园",
+      "station": "兴东",
+      "category": "产业园公寓（地块含多业态）",
+      "admin_source": "https://www.szzlcx.cn/",
+      "metrics": [
+        {
+          "period": "2026-11-08",
+          "rooms": "一室一厅",
+          "sqm": 44,
+          "price": 5200,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/gfangyuan/2231298799739914"
+        }
+      ],
+      "event": "2025年12月华润啤酒总部迁入同片区的雪花科创城。44㎡整租的样本在高层，共31层。",
+      "expectation": "能否支撑附近园区公寓租金，要看实际到岗员工中选择外租的比例。搜索页还混入低价合租房，应分别比。",
+      "context_sources": [
+        "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0423/2026042300893_c.pdf"
+      ],
+      "coordinates": [
+        113.919013,
+        22.581822
+      ]
+    },
+    {
+      "id": "baone",
+      "district": "宝安区",
+      "street": "新安街道",
+      "area": "宝安中心 · 壹方中心",
+      "station": "宝安中心",
+      "category": "综合体内房源，榜单未细分用途",
+      "admin_source": "https://www.sz.gov.cn/cn/xxgk/zfxxgj/gqdt/content/mpost_8010279.html",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "二室",
+          "price": 10000,
+          "mom": -15.25,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/baoanzhongxinquba/"
+        }
+      ],
+      "event": "壹方中心在新安街道海旺社区新湖路99号；综合体还包含写字楼。",
+      "expectation": "可拿同楼相近面积的整租家庭户型议价；商圈内其他村房和高端服务式公寓不宜合并估算。",
+      "context_sources": [],
+      "coordinates": [
+        113.887233,
+        22.554575
+      ]
+    },
+    {
+      "id": "nsjiuxiang",
+      "district": "南山区",
+      "street": "西丽街道",
+      "area": "九祥岭东区",
+      "station": "西丽",
+      "category": "城中村",
+      "admin_source": "https://www.szns.gov.cn/main/mssspt/2025mswss/xljdb/content/post_12716281.html",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 2000,
+          "mom": -19.35,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11-21",
+          "rooms": "一室",
+          "sqm": 30,
+          "price": 2000,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/fangyuan/4843306361760774"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "一室",
+          "sqm": 28.5,
+          "price": 1800,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/ditie/dt74-zx14-s3395/"
+        }
+      ],
+      "event": "南山区将九祥岭列入西丽街道的城中村。30㎡单间11月21日挂2000元。",
+      "expectation": "平台榜单降幅同时受挂牌结构影响。预算1800–2000元时，可在村内比较近30㎡、有无电梯和同朝向的整间。",
+      "context_sources": [],
+      "coordinates": [
+        113.954396,
+        22.580677
+      ]
+    },
+    {
+      "id": "nsguanlong",
+      "district": "南山区",
+      "street": "西丽街道",
+      "area": "官龙村 · 官龙名苑",
+      "station": "留仙洞",
+      "category": "城中村及相邻住宅小区",
+      "admin_source": "https://www.szns.gov.cn/main/mssspt/2025mswss/xljdb/content/post_12716281.html",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "村西区二室",
+          "price": 3500,
+          "mom": 16.67,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11-11",
+          "rooms": "村内整租单间",
+          "sqm": 37.5,
+          "price": 2000,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://m.fang.com/zf/sz/3_511556464.html"
+        },
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "官龙名苑一室",
+          "price": 5500,
+          "mom": -5.17,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "官龙名苑一室一厅",
+          "sqm": 59.56,
+          "price": 6200,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.58.com/xq/653132/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "官龙名苑一室一厅",
+          "sqm": 59.39,
+          "price": 5500,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.58.com/xq/653132/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "官龙名苑一室一厅",
+          "sqm": 60,
+          "price": 6300,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.58.com/xq/653132/"
+        }
+      ],
+      "event": "官龙名苑在同发路，靠近官龙村。项目包含商品房。",
+      "expectation": "官龙名苑三条约60㎡一房挂牌分别为5500、6200和6300元。比较同面积时可以核对朝向、装修、楼层和空置时间，寻找业主的实际底价。村内单间另作比较。",
+      "context_sources": [
+        "https://shenzhen.leyoujia.com/xq/detail/4065.html"
+      ],
+      "coordinates": [
+        113.943543,
+        22.580534
+      ]
+    },
+    {
+      "id": "nsliuxian",
+      "district": "南山区",
+      "street": "西丽街道",
+      "area": "留仙洞村",
+      "station": "留仙洞",
+      "category": "城中村",
+      "admin_source": "https://www.szns.gov.cn/main/mssspt/2025mswss/xljdb/content/post_12716281.html",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 2080,
+          "mom": -13.33,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "二室",
+          "price": 3800,
+          "mom": -15.56,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "一室",
+          "sqm": 26,
+          "price": 1980,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/rmss/zhengzu-103-nanshan/"
+        }
+      ],
+      "event": "邻近的创智云城用闲置产业楼改成1268套保租房。项目户型约50–69㎡，2026年上半年出租率约95%。",
+      "expectation": "26㎡村内开间与50㎡以上保租房的总价、资格不同。可观察村内两房同面积续租，确认分流是否使长期租金承压。",
+      "context_sources": [
+        "https://www.sznews.com/news/content/2026-07/20/content_32126149.htm"
+      ],
+      "coordinates": [
+        113.943543,
+        22.580534
+      ]
+    },
+    {
+      "id": "nsvankecity",
+      "district": "南山区",
+      "street": "西丽街道",
+      "area": "留仙洞总部基地 · 万科云城六期",
+      "station": "留仙洞",
+      "category": "项目含商务公寓及研发用房",
+      "admin_source": "https://meeb.sz.gov.cn/attachment/1/1533/1533439/11941563.pdf",
+      "metrics": [
+        {
+          "period": "2026-11（截至23日页面）",
+          "rooms": "一室",
+          "price": 4400,
+          "mom": -2.22,
+          "yoy": null,
+          "unit": "元/月",
+          "scope": "安居客板块榜单同名项目、同居室的租金样本，未固定面积与装修。",
+          "source": "https://sz.zu.anjuke.com/zujin/xililu/"
+        },
+        {
+          "period": "2026-11-23采集",
+          "rooms": "二室一厅",
+          "sqm": 50.8,
+          "price": 5500,
+          "unit": "元/月",
+          "yoy": null,
+          "mom": null,
+          "scope": "整租挂牌，未核成交或水电、物业等费用",
+          "source": "https://sz.zu.anjuke.com/ditie/dt74-zx14-s3395/"
+        }
+      ],
+      "event": "报建文本中六期包含商务公寓及研发用房，平台另列的一期为不同分期。",
+      "expectation": "比较同一分期、小两房的房租和物业费，避免把旁边村内开间或一期其他户型的变动算进来。",
+      "context_sources": [
+        "https://m.dcbbs.com/p-101144.html"
+      ],
+      "coordinates": [
+        113.943543,
+        22.580534
+      ]
+    }
+  ]
+}

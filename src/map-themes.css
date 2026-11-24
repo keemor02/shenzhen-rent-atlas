@@ -1,0 +1,290 @@
+/* Primary inputs and map themes sit outside the dark cartographic surface. */
+#game .mission {
+  align-items:end;
+  gap:8px 16px;
+  margin:0 0 10px;
+}
+#game .mission #dest-form {flex:1 1 15rem;min-width:0;max-width:24rem}
+#game .mission #dest-form>label {margin:0 0 4px;line-height:1.4}
+#game .dest-entry input {width:0;flex:1 1 8rem;min-height:36px;line-height:1.35}
+#game .mission>label,#route-filters>label {
+  display:grid;
+  align-content:end;
+  gap:4px;
+  min-width:0;
+  margin:0;
+  color:var(--sub);
+  font-size:.75rem;
+  line-height:1.4;
+}
+#game .mission>label :is(input,select),#route-filters :is(input,select) {
+  margin:0;
+  width:100%;
+  min-width:0;
+  min-height:36px;
+  padding:5px 8px;
+  color:var(--fg);
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:var(--paper);
+  font:inherit;
+  font-size:.875rem;
+}
+.mission-budget {width:8rem}
+.mission>label:has(#room) {width:5rem}
+.mission>label:has(#sqm) {width:6.6rem}
+#game .quick-dests {gap:4px 6px;margin:0 0 1px}
+#game .quick-dests button {min-height:32px}
+#game .mode-line {justify-content:flex-start;gap:5px 22px;padding:0 0 8px}
+#game .mode-line .range-label {flex:1 1 10rem;max-width:29rem;min-width:0}
+#game .mode-line .range-label strong {color:var(--fg)}
+#game .mode-line .range-label input {min-width:3rem}
+#route-filters {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:end;
+  gap:8px 12px;
+  margin:2px 0 10px;
+}
+#route-filters label {width:7.3rem}
+#route-filters label:has(#second-dest) {width:12rem}
+#game :is(.mission,#route-filters,.mode-line) :is(input,select):focus-visible {
+  outline:2px solid var(--teal);
+  outline-offset:2px;
+}
+
+.theme-band {margin:4px 0 10px}
+#map-topics {
+  display:flex;
+  align-items:stretch;
+  flex-wrap:wrap;
+  gap:3px;
+  padding:5px 0;
+  border-block:1px solid var(--line);
+}
+#map-topics button {
+  min-width:0;
+  min-height:35px;
+  padding:6px clamp(8px,1.2vw,16px);
+  border:1px solid transparent;
+  border-radius:5px;
+  background:transparent;
+  color:var(--fg);
+  font:inherit;
+  font-weight:550;
+  font-size:.875rem;
+  line-height:1.35;
+  text-align:center;
+}
+#map-topics button[aria-pressed=true] {
+  color:var(--paper);
+  background:var(--teal);
+  font-weight:650;
+}
+#map-topics button:disabled,#topic-options button:disabled {opacity:.6;cursor:default}
+#topic-options {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:5px 14px;
+  margin:6px 0 0;
+}
+#topic-options :is(.topic-group,.market-filters) {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:3px;
+  min-width:0;
+  margin:0;
+}
+#topic-options :is(.topic-label,.topic-period) {font-size:.75rem;color:var(--sub);line-height:1.4}
+.topic-label {margin-inline-end:4px}
+.topic-period {font-variant-numeric:tabular-nums}
+#topic-options :is([data-rent-kind],[data-rent-metric],[data-local-metric],[data-facility-category],[data-market-filter]) {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-height:30px;
+  max-width:100%;
+  padding:3px 7px;
+  border:1px solid transparent;
+  border-radius:4px;
+  background:var(--fill);
+  color:var(--fg);
+  font:inherit;
+  font-size:.8125rem;
+  line-height:1.35;
+}
+#topic-options [aria-pressed=true] {
+  border-color:var(--teal);
+  background:var(--fill);
+  color:var(--teal);
+  font-weight:650;
+}
+#topic-options .market-icon {width:17px;height:17px;margin:0;background:transparent;color:inherit}
+#game :is(#map-topics,#topic-options) button:focus-visible {
+  position:relative;
+  outline:2px solid var(--teal);
+  outline-offset:2px;
+  z-index:1;
+}
+@media(hover:hover) {
+  #map-topics button:not([aria-pressed=true]):not(:disabled):hover {background:var(--fill);border-color:var(--line)}
+  #topic-options button:not(:disabled):hover {border-color:var(--teal)}
+  #map-crumbs button:hover {text-decoration:underline}
+}
+#map-crumbs {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:2px 5px;
+  min-width:0;
+  color:#b4c9c2;
+}
+#map-crumbs:empty {display:none}
+#map-crumbs button {
+  min-height:28px;
+  max-width:100%;
+  padding:2px 4px;
+  border:0;
+  border-radius:3px;
+  background:transparent;
+  color:#d6ebe1;
+  font:inherit;
+  text-underline-offset:3px;
+}
+#map-crumbs button:focus-visible,#stage-key button:focus-visible,#event-legend button:focus-visible {
+  outline:2px solid #f3ce84;
+  outline-offset:1px;
+}
+#game .stage-head .map-switches {flex-wrap:wrap}
+#stage-key .market-judgments {gap:2px 4px;margin:0}
+#stage-key .market-judgments button,#event-legend button {min-height:27px;color:#d6e4dd}
+#stage-key .market-judgments button[aria-pressed=true] {background:#2e504b;border-color:#91bcab;color:#f3f7ea}
+#game .candidate-controls {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;margin-block:10px;font-size:.8125rem;color:var(--sub)}
+#game .candidate-controls label {display:inline-flex;align-items:center;gap:4px}
+#game .candidate-controls input {accent-color:var(--teal)}
+#game .saved-backup {display:inline-flex;align-items:center;gap:6px}
+#game .saved-backup button,#game .saved-backup .backup-import {padding:3px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--fg);font:inherit;font-size:.75rem;cursor:pointer}
+#game .saved-backup button:hover,#game .saved-backup .backup-import:hover {border-color:var(--teal);color:var(--teal)}
+.place-search {width:10rem}
+.saved-matrix-scroll {overflow-x:auto;margin:6px 0 12px}
+#saved-matrix table {width:100%;border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums}
+#saved-matrix th,#saved-matrix td {padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+#saved-matrix thead th button {padding:0;border:0;background:transparent;color:var(--teal);font:inherit;font-weight:650;text-align:left}
+#saved-matrix tbody th {width:5.5rem;color:var(--sub);font-weight:500;white-space:nowrap}
+#probe .facility-list {
+  list-style:none;
+  margin:6px 0 12px;
+  padding:0;
+  font-size:.875rem;
+}
+.facility-list li {padding:7px 0;line-height:1.45;overflow-wrap:anywhere}
+.facility-list li+li {border-top:1px solid var(--line)}
+.facility-list :is(small,address) {display:block;margin-top:2px;color:var(--sub);font:inherit;font-size:.75rem}
+#probe :is(.facility-list,.region-detail,.market-sources) a {
+  color:var(--teal);
+  text-decoration:underline;
+  text-underline-offset:3px;
+  overflow-wrap:anywhere;
+}
+#probe .region-detail {min-width:0;font-variant-numeric:tabular-nums}
+.region-detail .fine-links,.market-sources {gap:4px 10px}
+#probe .region-detail:has(.area-evidence),#probe .area-outlook {margin-block:14px}
+#probe .region-detail:has(.area-evidence) h3,#probe .area-outlook h3 {margin:0 0 5px;font-size:1rem;line-height:1.45}
+#probe .area-evidence {padding:0;margin:0;list-style:none}
+#probe .area-evidence li {padding:9px 0;line-height:1.5;overflow-wrap:anywhere}
+#probe .area-evidence li+li {border-top:1px solid var(--line)}
+#probe .area-evidence li>b {display:block;font-size:.9rem;line-height:1.5}
+#probe .area-evidence li>button {
+  padding:2px 0;
+  border:0;
+  background:transparent;
+  color:var(--teal);
+  font:inherit;
+  font-weight:650;
+  text-align:left;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+#probe .area-evidence li>button:focus-visible {outline:2px solid var(--teal);outline-offset:2px}
+#probe .area-evidence p,#probe .area-outlook p {margin:4px 0;color:var(--sub);font-size:.8125rem;line-height:1.55}
+#probe .area-evidence small {display:block;margin-top:5px;color:var(--fg);font-size:.75rem;line-height:1.5}
+#probe .area-evidence small a {display:inline-block;margin-inline-start:3px}
+#probe .area-outlook .area-observation {margin-top:8px;padding-inline-start:9px;border-inline-start:2px solid var(--line)}
+#probe .area-observation b {color:var(--fg);font-variant-numeric:tabular-nums}
+#probe .insight-controls {display:flex;flex-wrap:wrap;gap:4px 6px;margin-block:6px 12px}
+#probe .insight-controls [aria-pressed=true] {background:var(--fill);border-color:var(--teal);color:var(--teal);font-weight:650}
+#orbit .map-district,#orbit [data-market-event] {cursor:pointer}
+#orbit :is(.map-district,[data-market-event]):focus {outline:none;box-shadow:none}
+#orbit .map-district:focus-visible {stroke:#fff0b4;stroke-width:3;vector-effect:non-scaling-stroke}
+#orbit [data-market-event]:focus-visible .marker-hit {fill:none;stroke:#fff0b4;stroke-width:2.5}
+#orbit :is(.district-stat-name,.district-stat-value,.market-place-label) {
+  pointer-events:none;
+  user-select:none;
+  paint-order:stroke;
+  fill:#f6f4e7;
+  stroke:#223d41;
+  stroke-linejoin:round;
+  stroke-width:3px;
+  font-family:inherit;
+  font-size:12px;
+  font-weight:640;
+}
+#orbit .district-stat-value {font-size:11px;font-weight:500;font-variant-numeric:tabular-nums}
+#orbit .area-insight {cursor:pointer;outline:none;box-shadow:none}
+#orbit .area-insight :is(text,.insight-strip) {pointer-events:none;user-select:none}
+#orbit .area-insight .insight-part-hit {pointer-events:all}
+#orbit .area-insight :is(.insight-name,.insight-value) {
+  fill:#f8f7e9;
+  font-family:inherit;
+  font-size:12.5px;
+  font-weight:680;
+  paint-order:stroke;
+  stroke:#263d3e;
+  stroke-linejoin:round;
+  stroke-width:3px;
+}
+#orbit .area-insight .insight-value {font-size:11.5px;font-weight:540;font-variant-numeric:tabular-nums}
+#orbit .insight-back {fill:#173638;fill-opacity:.92}
+#orbit .insight-icon {fill:none;stroke:#ddeddf;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.45}
+#orbit .insight-stat {fill:#f2f4df;stroke:none;font-family:inherit;font-size:10.5px;font-weight:560;font-variant-numeric:tabular-nums}
+#orbit .area-insight:focus-visible .insight-hit {stroke:#fff0ac;stroke-width:2}
+@media(hover:hover) {
+  #orbit .area-insight:hover .insight-back {fill:#233f40;stroke:#e4ddb4;stroke-width:1}
+  #orbit [data-insight-part]:hover .insight-part-hit {fill:#47675d}
+}
+@media(max-width:680px) {
+  #game .mission {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px 8px;
+    margin-bottom:6px;
+  }
+  #game .mission #dest-form {display:contents}
+  #game .mission #dest-form>label {grid-column:1;grid-row:1;margin:0;align-self:center}
+  #game .mission .quick-dests {grid-column:2/-1;grid-row:1;justify-content:flex-end;margin:0;gap:3px}
+  #game .mission .dest-entry {grid-column:1/-1;grid-row:2}
+  #game .mission>label {grid-row:3;width:auto}
+  #game .mode-line {gap:4px 10px;padding-bottom:6px}
+  #map-topics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:3px 0}
+  #map-topics button {min-height:40px;padding:5px 2px}
+  #topic-options {gap:5px 10px}
+  #route-filters {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px}
+  #route-filters>label {width:auto}
+  #route-filters>label:has(#second-dest) {width:auto;grid-column:span 2}
+  #game .theme-band {margin-bottom:7px}
+}
+@media(max-width:320px) {
+  #map-topics {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(pointer:coarse) {
+  #map-topics button,#game .dest-entry button,#game .mission>label :is(input,select),#game .dest-entry input,#route-filters :is(input,select) {min-height:44px}
+  #map-crumbs button,#topic-options button,#game .quick-dests button,#game .mode-set button,#stage-key .market-judgments button,#event-legend button {min-height:38px}
+}
+@media(forced-colors:active) {
+  #map-topics button[aria-pressed=true],#topic-options button[aria-pressed=true] {color:HighlightText;background:Highlight;border-color:Highlight}
+  #orbit .map-district:focus-visible,#orbit [data-market-event]:focus-visible .marker-hit {stroke:Highlight}
+  #orbit .area-insight:focus-visible .insight-hit {stroke:Highlight}
+}

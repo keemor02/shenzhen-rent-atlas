@@ -1,0 +1,6 @@
+{
+  "name": "shenzhen-rent-atlas-browser-check",
+  "private": true,
+  "scripts": {"check": "node check.cjs", "check:exploration": "node check-exploration.cjs"},
+  "devDependencies": {"playwright": "1.62.1", "jsdom": "22.1.0"}
+}

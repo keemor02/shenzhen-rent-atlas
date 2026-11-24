@@ -1,0 +1,279 @@
+{
+  "asOf": "2026-11-24",
+  "policies": [
+    {
+      "id": "ba-public-rental-2026-029-pingzhou-iii",
+      "title": "坪洲新村三期公租房配租",
+      "scope": "hood",
+      "areaIds": [
+        "e-pingzhou"
+      ],
+      "subject": "符合收入财产条件的宝安户籍在册轮候人",
+      "summary": "本批次在坪洲新村三期供应腾退公租房 53 套，一房 1 套、二房 52 套。",
+      "date": "2026-09-07",
+      "source": "https://www.baoan.gov.cn/bajshej/gkmlpt/content/12/12969/post_12969464.html",
+      "sourceName": "宝安区住房和建设局",
+      "sourceAttachment": "https://www.baoan.gov.cn/bajshej/attachment/1/1746/1746500/12969464.docx",
+      "attachmentName": "附件 2 · 房源明细",
+      "status": "已截止",
+      "applicationStart": "2026-09-07",
+      "applicationEnd": "2026-09-18",
+      "applicationEndTime": "18:00",
+      "applicability": "须在 2026 年 9 月 4 日 18 时前登记为宝安户籍在册轮候人，并符合通告规定的经济状况核对或民政认定要求。",
+      "scopeBasis": "片区关联表示当批房源地址。申请资格按宝安户籍轮候条件认定。",
+      "housingDistricts": [
+        "宝安区"
+      ],
+      "sites": [
+        {
+          "name": "坪洲新村三期",
+          "district": "宝安区",
+          "streetId": "440306018000",
+          "zoneId": "zone-坪洲",
+          "hoodId": "e-pingzhou",
+          "address": "西乡街道坪洲新村三期（附件 2 第 99–151 号）"
+        }
+      ]
+    },
+    {
+      "id": "ns-employer-2026-045",
+      "title": "南山企业定向配租",
+      "scope": "district",
+      "areaIds": [
+        "南山区"
+      ],
+      "subject": "南山用人单位及其符合条件的职工",
+      "summary": "单位可在11月29日前申报。约1,320套房源中，留仙洞创智云城4栋AB座约800套。",
+      "date": "2026-11-21",
+      "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html",
+      "sourceName": "南山区住房和建设局",
+      "status": "受理中",
+      "applicationStart": "2026-11-21",
+      "applicationEnd": "2026-11-29",
+      "applicability": "符合本批评分条件的企业或机构统一申报，含前海区块，高尔夫和房地产开发类企业除外。获配单位再分给符合全职合同、社保、家庭住房、住房保障及人才引进条件的职工。",
+      "scopeBasis": "资格按南山区用人单位认定，项目地址用于标识实际供应。",
+      "housingDistricts": [
+        "南山区"
+      ],
+      "sites": [
+        {
+          "name": "创智云城4栋AB座",
+          "district": "南山区",
+          "streetId": "440305009000",
+          "address": "西丽街道留仙洞总部基地"
+        },
+        {
+          "name": "云启源境",
+          "district": "南山区",
+          "streetId": "440305001000",
+          "address": "南头街道"
+        },
+        {
+          "name": "乐源雅居",
+          "district": "南山区",
+          "streetId": "440305001000",
+          "address": "南头街道"
+        },
+        {
+          "name": "赤湾汇广场",
+          "district": "南山区",
+          "streetId": "440305006000",
+          "address": "招商街道赤湾片区"
+        }
+      ]
+    },
+    {
+      "id": "sz-rental-2026-044",
+      "title": "市本级894套保障房认租",
+      "scope": "city",
+      "areaIds": [],
+      "subject": "符合政府保租房条件的个人或家庭",
+      "summary": "11月23日至12月2日18时可网上认租。房源分布在龙岗、龙华、坪山、光明、大鹏。",
+      "date": "2026-11-23",
+      "source": "https://zjj.sz.gov.cn/xxgk/tzgg/content/post_13071336.html",
+      "sourceName": "深圳市住房保障署",
+      "status": "受理中",
+      "applicationStart": "2026-11-23",
+      "applicationStartTime": "09:00",
+      "applicationEnd": "2026-12-02",
+      "applicationEndTime": "18:00",
+      "applicability": "申请人需正常缴纳深圳社保且累计满一年，符合人才引进和家庭无房等条件。深户、非深户分队列选房，已婚者以家庭申请。",
+      "scopeBasis": "市级统一受理，五个供应地区按通告第一部分列入。",
+      "housingDistricts": [
+        "龙岗区",
+        "龙华区",
+        "坪山区",
+        "光明区",
+        "大鹏新区"
+      ]
+    },
+    {
+      "id": "ns-public-2026-037",
+      "title": "南山轮候家庭配租",
+      "scope": "district",
+      "areaIds": [
+        "南山区"
+      ],
+      "subject": "符合收入财产条件的南山户籍在册轮候人",
+      "summary": "本批289套，西丽冠铭花园占104套。11月10日18时结束网上认租。",
+      "date": "2026-10-26",
+      "source": "https://www.szns.gov.cn/nsqzjj/gkmlpt/content/13/13039/post_13039324.html",
+      "sourceName": "南山区住房和建设局",
+      "status": "已截止",
+      "applicationStart": "2026-10-26",
+      "applicationStartTime": "11:00",
+      "applicationEnd": "2026-11-10",
+      "applicationEndTime": "18:00",
+      "applicability": "需在10月23日18时前持南山户籍并登记在册。申请时须持2026年1月1日后出具的达标经济状况核对报告，或属于民政认定的特困、低保、低保边缘家庭。",
+      "scopeBasis": "认租资格对应南山区户籍轮候人，房源仅限公布的七个项目。",
+      "housingDistricts": [
+        "南山区"
+      ],
+      "sites": [
+        {
+          "name": "冠铭花园",
+          "district": "南山区",
+          "streetId": "440305009000",
+          "address": "茶光路74号"
+        },
+        {
+          "name": "众悦家园",
+          "district": "南山区",
+          "streetId": "440305008000",
+          "address": "龙珠四路88号"
+        },
+        {
+          "name": "长源京基御领公馆",
+          "district": "南山区",
+          "streetId": "440305008000",
+          "address": "长岭陂路长源村"
+        },
+        {
+          "name": "山海逸居",
+          "district": "南山区",
+          "streetId": "440305006000",
+          "address": "赤湾六路18号"
+        },
+        {
+          "name": "硅谷公寓",
+          "district": "南山区",
+          "streetId": "440305008000",
+          "address": "丽山路126号"
+        },
+        {
+          "name": "龙海家园",
+          "district": "南山区",
+          "address": "桂湾三路"
+        },
+        {
+          "name": "龙瑞佳园",
+          "district": "南山区",
+          "address": "兴海大道1048号"
+        }
+      ]
+    },
+    {
+      "id": "ba-rental-2026-023",
+      "title": "宝安个人保租房配租",
+      "scope": "district",
+      "areaIds": [
+        "宝安区"
+      ],
+      "subject": "符合政府保租房条件的个人或家庭",
+      "summary": "西乡海岚居253套，同批另有福海和沙井房源。8月20日18时结束认租。",
+      "date": "2026-08-11",
+      "source": "https://www.baoan.gov.cn/bajshej/gkmlpt/content/12/12930/post_12930935.html",
+      "sourceName": "宝安区住房和建设局",
+      "status": "已截止",
+      "applicationStart": "2026-08-11",
+      "applicationStartTime": "09:00",
+      "applicationEnd": "2026-08-20",
+      "applicationEndTime": "18:00",
+      "applicability": "三队列分别按宝安户籍及深圳社保满三年、宝安注册单位任职及区内社保满一年、深圳正常参保且累计满一年排序。家庭无房、无冲突保障及人才引进等要求仍须满足。",
+      "scopeBasis": "宝安区组织配租，三个项目均在区内。第三队列接受符合条件的全市参保者。",
+      "housingDistricts": [
+        "宝安区"
+      ],
+      "sites": [
+        {
+          "name": "海岚居",
+          "district": "宝安区",
+          "streetId": "440306018000",
+          "address": "海城路257号"
+        },
+        {
+          "name": "会展湾东城广场",
+          "district": "宝安区",
+          "streetId": "440306021000",
+          "address": "凤塘大道与展景路交会处"
+        },
+        {
+          "name": "星河荣御",
+          "district": "宝安区",
+          "streetId": "440306022000",
+          "address": "沙井路与沙中路交会处"
+        }
+      ]
+    },
+    {
+      "id": "sz-young-housing-2025",
+      "title": "青年人才过渡住房和安居补贴",
+      "scope": "city",
+      "areaIds": [],
+      "subject": "已获深圳青年人才认定者",
+      "summary": "认定后一年内可申请。过渡住房最长36个月，安居补贴最长24个月，两项择一。",
+      "date": "2025-12-17",
+      "source": "https://zjj.sz.gov.cn/gkmlpt/content/12/12554/post_12554794.html",
+      "sourceName": "深圳市住房和建设局、深圳市人力资源和社会保障局",
+      "status": "现行有效",
+      "effectiveFrom": "2026-01-01",
+      "applicability": "须通过深圳工作单位缴社保并符合本人及家庭住房、近三年住房转让、住房保障和单位优惠住房条件。申请补贴还须办理居住登记。",
+      "scopeBasis": "办法第二条规定适用于深圳市行政区域，过渡住房以实际公布房源为准。"
+    },
+    {
+      "id": "sz-fund-rent-2025",
+      "title": "无房职工租房提取公积金",
+      "scope": "city",
+      "areaIds": [],
+      "subject": "在深圳无房的公积金缴存职工及其家庭",
+      "summary": "普通租房按缴存额计算。承租公租房或经认定的保租房，符合条件的家庭可按实际月租提取。",
+      "date": "2025-12-05",
+      "source": "https://zjj.sz.gov.cn/gkmlpt/content/12/12533/post_12533128.html",
+      "sourceName": "深圳市住房公积金管理委员会",
+      "status": "现行有效",
+      "effectiveFrom": "2025-12-15",
+      "applicability": "职工及家庭成员须在深圳及深汕特别合作区无房。普通租房每月最高可提当月应缴存额的65%，多子女家庭另有标准。按实租提取时家庭合计受实际月租限制。",
+      "scopeBasis": "提取资格按职工和家庭无房状况认定，本市各片区执行同一规则。"
+    },
+    {
+      "id": "sz-public-housing-352",
+      "title": "公租房轮候资格",
+      "scope": "city",
+      "areaIds": [],
+      "subject": "深户成年人及符合条件的共同申请人",
+      "summary": "成年深户可申请轮候。家庭无房、收入财产、社保年限及已有住房保障均需核查。",
+      "date": "2023-07-03",
+      "source": "https://zjj.sz.gov.cn/gkmlpt/content/10/10689/mpost_10689152.html",
+      "sourceName": "深圳市人民政府",
+      "status": "现行有效",
+      "effectiveFrom": "2023-08-01",
+      "applicability": "新申请通常要求深圳社保累计满三年，特殊家庭等可获豁免。家庭在申请前三年内须无本地住房转让或离婚分割记录。旧轮候资格和具体批次依相应条款办理。",
+      "scopeBasis": "市政府令第352号适用于深圳公租房，区级实际配租另发批次通告。"
+    },
+    {
+      "id": "sz-affordable-rental-353",
+      "title": "保租房的租金和准入",
+      "scope": "city",
+      "areaIds": [],
+      "subject": "申请政府或社会主体保租房的租户",
+      "summary": "以同期同区域同品质市场参考租金为基数，政府组织配租按60%定价，社会主体出租上限为90%。",
+      "date": "2023-07-03",
+      "source": "https://zjj.sz.gov.cn/gkmlpt/content/10/10689/mpost_10689167.html",
+      "sourceName": "深圳市人民政府",
+      "status": "现行有效",
+      "effectiveFrom": "2023-08-01",
+      "applicability": "政府项目按批次审核家庭住房、保障、社保和人才条件。社会项目一般要求家庭未租保障住房，福田、罗湖、南山合并核验无房，其他区核验项目所在区。园区配套宿舍有单列例外。",
+      "scopeBasis": "市政府令第353号面向本市经认定的保障性租赁住房。定价比例仅用于相应保租房。"
+    }
+  ]
+}

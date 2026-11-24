@@ -1,0 +1,33 @@
+{
+  "snapshotDate": "2026-11-23",
+  "scope": "深圳市九个行政区与大鹏新区，未含深汕特别合作区。静态快照可离线重建。",
+  "inputs": {
+    "streets.geojson": "深圳74个街道的GCJ-02参考界线。原始乡镇界线约为2020年，按现行街道名单对照、转换坐标并简化。来源及商业使用限制见geography.json。",
+    "geography.json": "逐区覆盖、边界来源与使用限制、民政名册、地理锚点核对说明。",
+    "markets.json": "58同城商圈月度总租金和同户型同比。每个商圈有公开页面URL。2026年11月为截至快照日的月内样本。数据源未披露样本量或价格算法。",
+    "street-rents.json": "行政街道已核验的中国房价行情挂牌均价及珊瑚城中村综合租金，记录分别附页面来源。分组范围与单街道平均值分别储存。",
+    "projects.json": "十个具名项目或城中村的调研样本，各条注明房型、月份及来源。一个项目可以有多个口径。",
+    "housing-reference.json": "深圳2022年度商品住房街道历史参考单价。含市住建局发布通知和表格整理来源。",
+    "anchors.json": "仅保留实际参与项目定位的公交站坐标，以及项目到公交站、平台商圈到地铁站的人工匹配。地铁站与产业事件沿用data/base.json。"
+  },
+  "dataRights": {
+    "streetBoundaries": {
+      "provider": "锐多宝中国五级行政区划查询与下载平台",
+      "url": "https://github.com/ruiduobao/china-divisions-map",
+      "terms": "来源标示非商业参考用途。近岸填海与局部旧界误差见geography.json。"
+    },
+    "busAnchors": {
+      "provider": "Liang Wang 等，CPTOND-2025（2025年6月）",
+      "url": "https://doi.org/10.6084/m9.figshare.29377427.v2",
+      "terms": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "从项目使用的深圳站点数据按名称取6个参考坐标，保留5位小数。"
+    },
+    "rents": "租金数据的来源、统计期和单位随记录保存。来源页面的访问和再利用条件各自适用。"
+  },
+  "toolDependencies": [
+    {"name": "d3-geo", "version": "3.1.1", "upstream": "https://registry.npmjs.org/d3-geo/-/d3-geo-3.1.1.tgz", "license": "vendor/d3-geo.LICENSE", "changes": "保留官方 dist/d3-geo.min.js 和版权标头，将 CommonJS 对 d3-array 的一处引用改为本地 ./d3-array.cjs。"},
+    {"name": "d3-array", "version": "3.2.4", "upstream": "https://registry.npmjs.org/d3-array/-/d3-array-3.2.4.tgz", "license": "vendor/d3-array.LICENSE", "changes": "保留官方 dist/d3-array.min.js 的内容及版权标头，文件扩展名为 .cjs。"},
+    {"name": "internmap", "version": "2.0.3", "upstream": "https://registry.npmjs.org/internmap/-/internmap-2.0.3.tgz", "license": "vendor/internmap.LICENSE", "changes": "d3-array 的官方发行包已包含此依赖。"}
+  ]
+}

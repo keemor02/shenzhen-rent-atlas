@@ -1,0 +1,13 @@
+<details id="data-updates" class="live-panel" style="margin:0 0 14px;padding:0;border:0">
+  <summary>数据更新</summary>
+  <p id="live-connection" role="status">正在检查可用数据源…</p>
+  <div class="live-actions"><button type="button" id="live-sync">检查最新租金</button><label id="live-auto-label" hidden><input type="checkbox" id="live-auto" checked> 打开时及每小时检查</label><button type="button" id="download-launcher">下载联网启动器</button></div>
+  <p id="live-result" role="status"></p>
+  <div id="live-reports"></div>
+  <details id="launch-help"><summary>怎样启用联网更新和路况</summary>
+    <p>将地图 HTML 和下载的启动器放进同一文件夹，用 Python 3 运行 <code>python launcher.py</code>，打开弹出的本机网页。在 macOS 或 Linux 也可使用 <code>python3 launcher.py</code>。</p>
+    <p>租金来自公开网页，按来源发布周期更新。实时驾车需在运行启动器前设置本机环境变量 <code>AMAP_WEB_KEY</code>，使用已开通路线规划的高德 Web 服务 Key。</p>
+    <div class="fine-links"><a href="https://sz.zf.58.com/zujin/" target="_blank" rel="noopener noreferrer">58商圈租金</a><a href="https://m.creprice.cn/city/sz.html?type=lease" target="_blank" rel="noopener noreferrer">中国房价行情</a><a href="https://lbs.amap.com/api/webservice/guide/api/newroute" target="_blank" rel="noopener noreferrer">高德路线服务</a></div>
+  </details>
+</details>
+
