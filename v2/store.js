@@ -1,17 +1,22 @@
-/* V2 统一状态中心与本地持久化：自动兼容并无损迁移旧版收藏和看房手记 */
+/* V2.5 统一状态中心与本地持久化：自动兼容并无损迁移旧版收藏和看房手记 */
 (function (global) {
   'use strict';
 
   const SESSION_KEY = 'shenzhen-rent-atlas.v2.session';
-  const JOURNAL_KEY = 'shenzhen-rent-atlas.journal.v1'; // 保持与旧版完全同一个 Key，老收藏和看房记录自动延续！
+  const JOURNAL_KEY = 'shenzhen-rent-atlas.journal.v1'; // 保持与旧版同一个 Key，老收藏和看房手记无缝延续！
   const FORMAT = 'shenzhen-rent-journal';
 
   function createStore(onChange) {
     const state = {
-      view: 'explore',          // explore | commute | livability | watchlist
-      subMode: 'rent',          // explore: rent | arbitrage | premium | yoy | mom; livability: all | mall | school | park | market | supermarket | health | pharmacy
-      macroMode: '',            // '' | community | apartment | village | listing | ref2022 | density
-      layout: 'geo',            // geo | radial
+      lens: 'rent',             // rent | commute | radar (3大互斥核心镜头)
+      rentSub: 'now',           // now | yoy | mom | macro
+      macroMetric: 'community', // community | apartment | village | listing | ref2022 | density
+      layout: 'geo',            // geo | radial (10分钟时间圈)
+      showFacilities: false,    // 独立叠加图层：核验设施（商场/学校/公园等）
+      facFilter: '',            // '' | mall | school | park | market | supermarket | health | pharmacy
+      showRisks: true,          // 独立叠加图层：6类公开避坑图标
+      riskFilter: '',           // '' | works | air | rail | flight | crowd | noise
+      watchlistOpen: false,     // 看房清单全屏覆盖层
       work: '',
       work2: '',
       mode: 'rail',             // rail | bus | drive
@@ -26,19 +31,18 @@
       verifiedOnly: false,
       oppOnly: false,
       usedHubs: [],             // 用户点击「我常去这个园区」的园区名称列表
-      riskFilter: '',           // '' 或 6 类公共事件之一 (works/air/rail/flight/crowd/noise)
       referencePlaceId: '',     // 用户点击「设为参照」的片区 ID
       weights: { commute: 1, rent: 1, environment: 1, convenience: 1 },
       selectedPlaceId: '',
       selectedStreetId: '',
       selectedDistrict: '',
       selectedRiskId: '',
-      placeTab: 'overview',     // overview | arbitrage | notes
+      selectedFacilityId: '',
+      focusSection: '',         // '' | 'evidence' | 'note'
       seen: new Set(),
       status: '',
     };
 
-    // Journal entries keyed by placeId (backward compatible with v1 format!)
     const journal = new Map();
     let chosenId = '';
 
@@ -95,12 +99,14 @@
       try {
         const s = JSON.parse(raw);
         if (!s || typeof s !== 'object') return;
-        if (['explore', 'commute', 'livability', 'watchlist'].includes(s.view)) state.view = s.view;
-        if (typeof s.subMode === 'string') state.subMode = s.subMode;
-        const macroAliases = { districtRent: 'community' };
-        const mm = macroAliases[s.macroMode] ?? s.macroMode;
-        if (['', 'community', 'apartment', 'village', 'listing', 'ref2022', 'density'].includes(mm)) state.macroMode = mm;
+        if (['rent', 'commute', 'radar'].includes(s.lens)) state.lens = s.lens;
+        if (['now', 'yoy', 'mom', 'macro'].includes(s.rentSub)) state.rentSub = s.rentSub;
+        if (['community', 'apartment', 'village', 'listing', 'ref2022', 'density'].includes(s.macroMetric)) state.macroMetric = s.macroMetric;
         if (['geo', 'radial'].includes(s.layout)) state.layout = s.layout;
+        if (typeof s.showFacilities === 'boolean') state.showFacilities = s.showFacilities;
+        if (typeof s.facFilter === 'string') state.facFilter = s.facFilter;
+        if (typeof s.showRisks === 'boolean') state.showRisks = s.showRisks;
+        if (typeof s.riskFilter === 'string') state.riskFilter = s.riskFilter;
         if (typeof s.work === 'string') state.work = s.work;
         if (typeof s.work2 === 'string') state.work2 = s.work2;
         if (['rail', 'bus', 'drive'].includes(s.mode)) state.mode = s.mode;
@@ -115,22 +121,24 @@
         state.verifiedOnly = s.verifiedOnly === true;
         state.oppOnly = s.oppOnly === true;
         if (Array.isArray(s.usedHubs)) state.usedHubs = [...new Set(s.usedHubs.filter(x => typeof x === 'string'))];
-        if (typeof s.riskFilter === 'string') state.riskFilter = s.riskFilter;
         if (typeof s.referencePlaceId === 'string') state.referencePlaceId = s.referencePlaceId;
         if (s.weights && typeof s.weights === 'object') {
           for (const k of ['commute', 'rent', 'environment', 'convenience']) {
             if ([1, 2, 3].includes(Number(s.weights[k]))) state.weights[k] = Number(s.weights[k]);
           }
         }
-        if (typeof s.selectedPlaceId === 'string') state.selectedPlaceId = s.selectedPlaceId;
-        if (typeof s.selectedStreetId === 'string') state.selectedStreetId = s.selectedStreetId;
         if (Array.isArray(s.seen)) state.seen = new Set(s.seen.filter(x => typeof x === 'string'));
       } catch {}
     }
 
     function saveSession() {
       writeLS(SESSION_KEY, JSON.stringify({
-        ...state,
+        lens: state.lens, rentSub: state.rentSub, macroMetric: state.macroMetric, layout: state.layout,
+        showFacilities: state.showFacilities, facFilter: state.facFilter, showRisks: state.showRisks, riskFilter: state.riskFilter,
+        work: state.work, work2: state.work2, mode: state.mode, limit: state.limit, limit2: state.limit2,
+        access: state.access, egress: state.egress, budget: state.budget, room: state.room, sqm: state.sqm,
+        housingTypes: state.housingTypes, verifiedOnly: state.verifiedOnly, oppOnly: state.oppOnly,
+        usedHubs: state.usedHubs, referencePlaceId: state.referencePlaceId, weights: state.weights,
         seen: [...state.seen],
       }));
     }
@@ -148,7 +156,7 @@
       if (added) cur.add(hubName);
       else cur.delete(hubName);
       state.usedHubs = [...cur];
-      state.status = added ? `已标记常去「${hubName}」，该园区周边不再计入非必要溢价扣分。` : `已取消常去「${hubName}」。`;
+      state.status = added ? `已标记常去「${hubName}」，不再计入溢价提醒` : `已取消常去「${hubName}」`;
       saveSession();
       onChange?.();
       return added;
@@ -178,7 +186,7 @@
         journal.set(id, prev);
       }
       saveJournal();
-      state.status = prev.saved ? `已收藏 ${prev.name}，可在「看房清单」对比。` : `已取消收藏 ${prev.name}。`;
+      state.status = prev.saved ? `已加入看房清单：${prev.name}` : `已移除：${prev.name}`;
       onChange?.();
       return prev.saved;
     }
@@ -203,7 +211,7 @@
       prev.updatedAt = new Date().toISOString();
       journal.set(id, prev);
       saveJournal();
-      state.status = `已保存 ${prev.name} 的实地踩点记录。`;
+      state.status = `已保存踩点记录：${prev.name}`;
       onChange?.();
     }
 
@@ -219,7 +227,7 @@
     function importBackup(jsonText) {
       const parsed = JSON.parse(jsonText);
       if (parsed?.format !== FORMAT || parsed?.version !== 1 || !Array.isArray(parsed.entries)) {
-        throw new Error('请选择本工具导出的第一版手记/收藏 JSON 文件。');
+        throw new Error('请选择本工具导出的看房手记/收藏 JSON 文件。');
       }
       let merged = 0;
       for (const item of parsed.entries) {
@@ -250,7 +258,7 @@
         chosenId = parsed.chosenId;
       }
       saveJournal();
-      state.status = `已导入并合并 ${merged} 条收藏/踩点记录。`;
+      state.status = `已导入并合并 ${merged} 条记录`;
       onChange?.();
       return merged;
     }

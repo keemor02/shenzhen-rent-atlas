@@ -16,6 +16,7 @@ function bootEngineAndStore(initialStorage = {}) {
   const ctx = vm.createContext({
     window: {},
     atob,
+    requestAnimationFrame: fn => { fn(); return 1; },
     localStorage: {
       getItem: k => mem.get(k) ?? null,
       setItem: (k, v) => mem.set(k, v),
@@ -150,7 +151,7 @@ test('V2 dynamic arbitrage radar surfaces event-driven opportunities and peer pr
   assert.ok(res.eligibleRows.some(r => r.arbitrage.status === 'opportunity'));
 });
 
-test('V2 map renderer fixes screenshot bugs: no-stroke chips, honest band range on Xixiang, 6 event icons, zoomed 3-icon badges', () => {
+test('V2.5 map renderer: unmistakable ↑贵¥ premium tag, hub walk rings, zero 圈外/0-icon spam, independent facility & risk overlays', () => {
   const { store, engine, ctx } = bootEngineAndStore();
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fakeSvg = {
@@ -159,7 +160,7 @@ test('V2 map renderer fixes screenshot bugs: no-stroke chips, honest band range 
     classList: { toggle() {} },
     setAttribute(k, v) { this.attrs[k] = v; },
     addEventListener() {},
-    getBoundingClientRect() { return { width: 900, height: 540, left: 0, top: 0 }; },
+    getBoundingClientRect() { return { width: 1100, height: 680, left: 0, top: 0 }; },
     querySelector() { return null; },
   };
   const map = ctx.createV2Map(fakeSvg, atlas, engine, timing, esc);
@@ -167,27 +168,42 @@ test('V2 map renderer fixes screenshot bugs: no-stroke chips, honest band range 
   store.state.selectedPlaceId = 'baxinlake';
   const evalResult = engine.evaluateAll(store.state, store);
 
-  // 1. Selected chip must use class="no-stroke" and walk leg uses stroke-dasharray
+  // 1. Rent lens: selected chip uses no-stroke + dashed walk leg + solid rail leg
   map.render({ state: store.state, evalResult, store });
-  assert.match(fakeSvg.innerHTML, /class="no-stroke"[^>]*>新安湖花园二三期 ¥4,117/);
+  assert.match(fakeSvg.innerHTML, /class="no-stroke"[^>]*>新安湖花园二三期 · ¥4,117/);
   assert.match(fakeSvg.innerHTML, /stroke-dasharray="4 4"/, 'walk access leg should be dashed');
 
-  // 2. Zoomed-in Xixiang footprints show honest range (1.4–2.5k / 3.3–4.6k) + 3-icon insight badges, NOT identical ¥1,950!
+  // 2. Radar lens («议价与溢价»): draws 10-hub 15-min walk rings, NEVER prints 圈外 noise, uses ↑贵¥ (never bare +¥)
+  store.state.lens = 'radar';
+  map.render({ state: store.state, evalResult, store });
+  assert.match(fakeSvg.innerHTML, /rgba\(255,218,120,0\.13\)/, 'own workplace 15-min walk halo ring drawn');
+  assert.match(fakeSvg.innerHTML, /rgba\(226,125,96,0\.10\)/, 'other hub 15-min premium halo ring drawn');
+  assert.doesNotMatch(fakeSvg.innerHTML, /圈外/, 'Must not spam 圈外 labels across the map');
+  assert.doesNotMatch(fakeSvg.innerHTML, /\+¥\d+/, 'Must not display confusing +¥800 that looks like cheap rent');
+  // If any place has premium status, ensure it uses ↑贵¥
+  if (evalResult.rows.some(r => r.premium?.status === 'premium')) {
+    assert.match(fakeSvg.innerHTML, /↑贵¥\d+/, 'Unnecessary premium badge must clearly state ↑贵¥');
+  }
+
+  // 3. Zoomed-in Xixiang footprints in Rent lens: honest range (1.4k–2.5k), NO ¥1,950 midpoint, NO 0-count insight icons!
+  store.state.lens = 'rent';
   const pingzhou = engine.placeById.get('e-pingzhou');
   map.camera.fit(pingzhou.footprint.bounds);
   store.state.selectedPlaceId = 'e-pingzhou';
   map.render({ state: store.state, evalResult, store });
   assert.match(fakeSvg.innerHTML, /1\.4k–2\.5k/, 'Xixiang village band should display range, not fake single midpoint');
   assert.doesNotMatch(fakeSvg.innerHTML, /¥1,950/, 'Must not stamp identical ¥1,950 across Xixiang villages');
-  assert.match(fakeSvg.innerHTML, /data-insight-part="events"/, 'Zoomed footprint should render clickable 3-icon insight badge');
+  assert.doesNotMatch(fakeSvg.innerHTML, /class="insight-stat no-stroke"[^>]*>0</, 'Must never draw zero-count insight icons');
 
-  // 3. Livability view renders 6 distinct SVG event pictograms (not generic triangle)
+  // 4. Independent overlays: facilities & 6-type risk icons work right on top of Rent lens!
+  store.state.showFacilities = true;
+  store.state.showRisks = true;
+  map.render({ state: store.state, evalResult, store });
+  assert.match(fakeSvg.innerHTML, /data-fac="osm-relation-19740575"/, 'Baoan Daqianli mall pin overlays cleanly on rent map');
   map.camera.reset();
-  store.state.view = 'livability';
-  const legend = map.render({ state: store.state, evalResult, store });
-  assert.match(fakeSvg.innerHTML, /class="event-marker"/);
-  assert.match(legend, /data-risk-filter="works"/);
-  assert.match(legend, /data-risk-filter="noise"/);
+  map.camera.control('in');
+  map.render({ state: store.state, evalResult, store });
+  assert.match(fakeSvg.innerHTML, /class="event-marker"/, '6-type public event icons render cleanly');
 });
 
 test('V2 store migrates legacy v1 journal bookmarks and field ratings losslessly', () => {
@@ -215,14 +231,14 @@ test('Built V2 index.html parses cleanly with zero JS syntax errors, CSS focus/s
   assert.match(html, /id="atlas-v2-data"/);
   assert.match(html, /#atlas-svg :focus \{ outline: none; \}/);
   assert.match(html, /#atlas-svg text\.no-stroke \{ stroke: none;/);
-  assert.match(html, /--accent-ink: #0d221f/);
+  assert.match(html, /--accent-ink: #0b221e/);
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   assert.equal(scripts.length, 2);
   scripts.forEach((src, i) => new vm.Script(src, { filename: `v2-inline-${i}.js` }));
 
   const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
   const ui = read('v2/ui.js');
-  const dynamicIds = new Set(['place-note-form', 'btn-export-wl', 'input-import-wl']);
+  const dynamicIds = new Set(['place-note-form', 'btn-export-wl', 'input-import-wl', 'sec-evidence']);
   for (const m of ui.matchAll(/\$\('#([\w-]+)'\)|getElementById\('([\w-]+)'\)/g)) {
     const id = m[1] || m[2];
     if (!dynamicIds.has(id)) assert.ok(htmlIds.has(id), `Missing DOM id #${id} in v2/template.html`);

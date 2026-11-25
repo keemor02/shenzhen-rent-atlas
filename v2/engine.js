@@ -617,8 +617,8 @@
         const trendRoom = state.room || '1';
         const yoy = s.trend?.[trendRoom]?.yoy ?? null;
         const mom = s.trend?.[trendRoom]?.mom ?? null;
-        const facCount = state.view === 'livability' && state.subMode && state.subMode !== 'all'
-          ? atlas.facilities.filter(f => f.streetId === s.id && f.category === state.subMode).length
+        const facCount = state.showFacilities && state.facFilter
+          ? atlas.facilities.filter(f => f.streetId === s.id && f.category === state.facFilter).length
           : s.facilityCount;
         const stEvents = [...new Set([...(s.eventIds || []), ...members.flatMap(m => m.place.eventIds)])]
           .map(id => eventById.get(id)).filter(Boolean);
@@ -710,7 +710,7 @@
     }
 
     return {
-      nodes, QUICK_WORKS, ALIASES, GRAIN_LABELS, FIT_NAMES, FIT_KEYS,
+      nodes, hubNodes, QUICK_WORKS, ALIASES, GRAIN_LABELS, FIT_NAMES, FIT_KEYS,
       resolveWork, nearbyFacilities, evaluateAll, discoverNext, compareToReference,
       eventById, policyById, facById, riskById, streetById, placeById,
     };
