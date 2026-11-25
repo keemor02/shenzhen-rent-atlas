@@ -201,6 +201,7 @@
       if (row.premium?.status === 'premium') sigHtml = `<span class="sig-pill sig-prem">↑ 贵¥${Math.round(row.premium.extra)}/月</span>`;
       else if (row.arbitrage.status === 'opportunity') sigHtml = `<span class="sig-pill sig-opp">↘ 可议价</span>`;
       else if (row.premium?.status === 'direct') sigHtml = `<span class="sig-pill sig-walk">◆ 步行可达</span>`;
+      if (row.mastery?.visited) sigHtml += `<span class="sig-pill sig-opp">✓ 已实勘${row.mastery.avgStar ? ' ' + row.mastery.avgStar + '★' : ''}</span>`;
 
       const fitBadge = row.fit.count
         ? `<button type="button" class="fit-pill${row.fit.premiumPenalty ? ' has-pen' : ''}" data-toggle-fit title="查看四维评分明细">适配 ${esc(row.fit.rangeText)}${row.fit.premiumPenalty ? ' (−' + row.fit.premiumPenalty + ')' : ''}</button>`
@@ -376,13 +377,17 @@
         const lm = engine.landmarkById.get(state.selectedLandmarkId);
         if (lm) {
           const kindLabel = lm.kind === 'hub' ? '重点办公园区' : lm.kind === 'mall' ? '知名商圈地标' : '核心交通枢纽';
+          const aura = engine.landmarkAura(lm.id);
+          const railPlates = aura ? [...aura.rail30].map(id => evalResult.plateRowById.get(id)).filter(Boolean).sort((a, b) => a.plate.unitPrice - b.plate.unitPrice).slice(0, 6) : [];
           html = `<div class="drawer-head"><p class="drawer-kicker">${esc(lm.district + ' · ' + kindLabel)}</p><button type="button" class="drawer-close" data-close-drawer>×</button></div>
             <div class="drawer-title-row"><h2>${esc(lm.name)}</h2></div>
-            <p class="sub-note" style="color:var(--fg);margin-bottom:12px">${esc(lm.note)}</p>
+            <p class="sub-note" style="color:var(--fg);margin-bottom:8px">${esc(lm.note)}</p>
+            ${aura ? `<div class="vital-strip"><span class="vital-item"><strong>${aura.walk15.size}</strong><small class="sub-note" style="margin:0">板块15分步行</small></span><span class="vital-sep">|</span><span class="vital-item"><strong>${aura.rail30.size}</strong><small class="sub-note" style="margin:0">板块${aura.minutes}分轨交可达</small></span></div>` : ''}
             <div class="drawer-actions">
               <button type="button" class="btn-primary" data-set-work="${esc(lm.name)}">◆ 设为通勤目的地</button>
               <button type="button" class="btn-ghost" data-set-work2="${esc(lm.name)}">设为第二目的地</button>
-            </div>`;
+            </div>
+            ${railPlates.length ? `<div class="sec-head"><h3>${aura.minutes} 分钟轨交圈低单价板块</h3></div><ul class="estate-list">${railPlates.map(r => `<li><button type="button" data-pick-plate="${esc(r.plate.id)}">${esc(r.plate.name)}板块</button><span class="meta">${r.plate.unitPrice}元/㎡ · ${aura.timeMap.get(r.plate.id)}分</span></li>`).join('')}</ul>` : ''}`;
         }
       } else if (state.selectedRiskId) {
         const rk = engine.riskById.get(state.selectedRiskId);
@@ -738,14 +743,91 @@
       if (state.selectedPlateId || state.selectedPlaceId || state.selectedLandmarkId || state.selectedDistrict || state.selectedRiskId || state.selectedFacilityId) clearSelection();
     });
 
-    const hud = $('#hover-hud');
-    $('#atlas-svg').addEventListener('pointerover', ev => {
+    // 《P 社 / 纪元》零点击悬停结构化属性卡：鼠标滑过拼图/状态栏/地标即刻呈现优缺点，无需反复开关抽屉！
+    const hCard = $('#hover-card');
+    const stageEl = $('#stage');
+    const svgEl = $('#atlas-svg');
+    let lastHoverKey = '';
+
+    function positionHoverCard(ev) {
+      if (hCard.hidden) return;
+      const sr = stageEl.getBoundingClientRect();
+      const cw = 260, ch = hCard.offsetHeight || 135;
+      let left = ev.clientX - sr.left + 16;
+      let top = ev.clientY - sr.top + 16;
+      if (left + cw > sr.width - 12) left = ev.clientX - sr.left - cw - 14;
+      if (top + ch > sr.height - 12) top = ev.clientY - sr.top - ch - 12;
+      hCard.style.left = Math.max(8, left) + 'px';
+      hCard.style.top = Math.max(8, top) + 'px';
+    }
+
+    function buildHoverCardHtml(t) {
+      if (!t) return '';
+      const d = t.dataset;
+      if (d.plate) {
+        const row = evalResult.plateRowById.get(d.plate);
+        if (!row) return '';
+        const pl = row.plate;
+        const buffs = [];
+        if (pl.lines?.length) buffs.push(`🚇 ${pl.lines.join('/')}号线`);
+        if (pl.malls?.length) buffs.push(`🛍 ${pl.malls[0].name} ${fmtDist(pl.malls[0].meters)}`);
+        else if ((pl.facCats || []).includes('mall')) buffs.push('🛍 商圈商场');
+        if ((pl.facCats || []).includes('park')) buffs.push('🌳 公园');
+        if ((pl.facCats || []).includes('school')) buffs.push('🏫 学校');
+        if ((pl.facCats || []).includes('health')) buffs.push('🏥 医疗');
+        if (row.arbitrage.status === 'opportunity') buffs.push('↘ 可议价');
+        if (row.premium?.status === 'direct') buffs.push('◆ 步行可达');
+        if (row.mastery?.visited) buffs.push(row.mastery.avgStar ? `✓ 已实勘 ${row.mastery.avgStar}★` : '✓ 已实勘');
+
+        const debuffs = [];
+        if (row.premium?.status === 'premium') debuffs.push(`↑ 同程贵¥${Math.round(row.premium.extra)}/月`);
+        for (const rk of row.risks.slice(0, 2)) debuffs.push(`⚠ ${rk.kind}`);
+
+        const subParts = [pl.district + '·' + pl.streetName];
+        if (row.route) subParts.push(`通勤 ${row.route.minutes}分 (${row.route.label})`);
+        if (row.fit.count) subParts.push(`适配 ${row.fit.rangeText}`);
+
+        return `<div class="hc-head"><strong>${esc(pl.name)}</strong><span class="hc-price">${pl.unitPrice}元/㎡</span></div>
+          <div class="hc-sub">${esc(subParts.join(' · '))}</div>
+          ${buffs.length ? `<div class="hc-buffs">${buffs.slice(0, 5).map(b => `<span class="hc-tag hc-buff">${esc(b)}</span>`).join('')}</div>` : ''}
+          ${debuffs.length ? `<div class="hc-debuffs">${debuffs.map(b => `<span class="hc-tag hc-debuff">${esc(b)}</span>`).join('')}</div>` : ''}
+          <div class="hc-foot">点击锁定影响连线 · 查看具体月租与小区</div>`;
+      }
+      if (d.landmark) {
+        const lm = engine.landmarkById.get(d.landmark);
+        if (!lm) return '';
+        return `<div class="hc-head"><strong>◆ ${esc(lm.name)}</strong></div>
+          <div class="hc-sub">${esc(lm.district)} · ${esc(lm.note)}</div>
+          <div class="hc-foot">点击高亮 30 分钟辐射圈 / 设为目的地</div>`;
+      }
+      if (d.risk) {
+        const rk = engine.riskById.get(d.risk);
+        return rk ? `<div class="hc-head"><strong>⚠ ${esc(rk.name)}</strong></div><div class="hc-sub">${esc(rk.kind)} · ${esc(rk.status)}</div>` : '';
+      }
+      if (d.fac) {
+        const f = engine.facById.get(d.fac);
+        return f ? `<div class="hc-head"><strong>${esc(f.name)}</strong></div><div class="hc-sub">${esc(FAC_CAT[f.category] || f.category)} · ${esc(f.address || '')}</div>` : '';
+      }
+      if (d.district) {
+        return `<div class="hc-head"><strong>${esc(d.district)}</strong></div><div class="hc-sub">${esc(t.getAttribute('aria-label') || '')}</div>`;
+      }
+      return '';
+    }
+
+    svgEl.addEventListener('pointermove', ev => {
+      if (svgEl.classList.contains('panning')) { hCard.hidden = true; lastHoverKey = ''; return; }
       const t = ev.target.closest?.('[data-plate],[data-landmark],[data-district],[data-risk],[data-fac]');
-      const label = t?.getAttribute('aria-label') || '';
-      hud.textContent = label;
-      hud.hidden = !label;
+      const key = t ? (t.dataset.plate || t.dataset.landmark || t.dataset.risk || t.dataset.fac || t.dataset.district || '') : '';
+      if (!key) { hCard.hidden = true; lastHoverKey = ''; return; }
+      if (key !== lastHoverKey) {
+        lastHoverKey = key;
+        const html = buildHoverCardHtml(t);
+        hCard.innerHTML = html;
+        hCard.hidden = !html;
+      }
+      positionHoverCard(ev);
     });
-    $('#atlas-svg').addEventListener('pointerleave', () => { hud.hidden = true; hud.textContent = ''; });
+    svgEl.addEventListener('pointerleave', () => { hCard.hidden = true; lastHoverKey = ''; });
 
     if (typeof ResizeObserver === 'function') {
       let raf = 0;

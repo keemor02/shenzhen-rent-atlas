@@ -85,7 +85,7 @@ test('V3 unnecessary location premium detects non-work hub plates and clears on 
   assert.equal(res2.plateRowById.get('p-shenda').fit.premiumPenalty, 0);
 });
 
-test('V3 jigsaw map renders 元/㎡ by default, mountains/water/metro/landmarks, ↑贵¥ radar stamps, and zero floating 圈外 spam', () => {
+test('V3.5 strategy map renders Civ 6 banners, Cities Skylines influence lines, landmark aura, field mastery & zero 圈外 spam', () => {
   const { store, engine, ctx } = bootV3();
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fakeSvg = {
@@ -96,28 +96,73 @@ test('V3 jigsaw map renders 元/㎡ by default, mountains/water/metro/landmarks,
   };
   const map = ctx.createV3Map(fakeSvg, atlas, engine, timing, esc);
   store.state.work = '留仙洞';
+
+  // Verify location-accurate facility attribution (坪洲 gets mall & school; 固戍 does not falsely inherit 宝安大仟里)
+  const pzPlate = engine.plateById.get('p-pingzhou');
+  const gsPlate = engine.plateById.get('p-gushu');
+  assert.ok(pzPlate.lines.includes('1') && pzPlate.lines.includes('12'), 'Pingzhou plate should carry Metro lines 1 & 12');
+  assert.ok(pzPlate.facCats.includes('mall') && pzPlate.facCats.includes('school'));
+  assert.ok(!gsPlate.facCats.includes('mall'), 'Gushu should not inherit distant 宝安大仟里');
+
   const evalResult = engine.evaluateAll(store.state, store);
 
-  // 1. Rent lens: 元/㎡ labels + mountains + water + metro skeleton + landmarks
+  // 1. Rent lens overview: Civ 6 compact banners with 元/㎡ + terrain + metro + landmarks
   map.render({ state: store.state, evalResult, store });
   assert.match(fakeSvg.innerHTML, /class="terrain-mtn"/);
   assert.match(fakeSvg.innerHTML, /class="terrain-water"/);
   assert.match(fakeSvg.innerHTML, /class="metro-skeleton"/);
   assert.match(fakeSvg.innerHTML, /class="landmark-pin"/);
-  assert.match(fakeSvg.innerHTML, /\d+元\/㎡/, 'Overview rent map should show 元/㎡ unit prices');
+  assert.match(fakeSvg.innerHTML, /class="civ-banner"/);
+  assert.match(fakeSvg.innerHTML, /\d+\/㎡/, 'Civ 6 banners should show compact 元/㎡ prices');
 
-  // 2. Radar lens: hub 15-min rings, migration arrows, zero 圈外, unmistakable ↑贵¥ (never +¥)
+  // 2. Cities: Skylines focus dimming + green/red influence lines + expanded Civ 6 Buff/Debuff bar
+  store.saveNote('p-pingzhou', '坪洲板块', { monthly: 2300, environment: 4, convenience: 5, note: '实勘大仟里旁' });
+  const evalVisited = engine.evaluateAll(store.state, store);
+  assert.equal(evalVisited.plateRowById.get('p-pingzhou').mastery.visited, true);
+  assert.equal(evalVisited.plateRowById.get('p-pingzhou').mastery.avgStar, 4.5);
+
+  store.state.selectedPlateId = 'p-pingzhou';
+  map.camera.fit(pzPlate.bounds);
+  map.render({ state: store.state, evalResult: evalVisited, store });
+  assert.match(fakeSvg.innerHTML, /fill-opacity="0\.46"/, 'Selecting a plate should dim surrounding plates');
+  assert.match(fakeSvg.innerHTML, /class="influence-line-good"/, 'Pingzhou should draw green influence beams to nearby verified facilities');
+  assert.match(fakeSvg.innerHTML, /宝安大仟里/);
+  assert.match(fakeSvg.innerHTML, /M1·12/, 'Expanded Civ 6 banner should display real metro lines');
+  assert.match(fakeSvg.innerHTML, /✓4\.5/, 'Field-visited plate should display mastery badge on Civ 6 banner');
+
+  // Selecting 灵芝 should draw red risk influence beam to 新安广场
+  const lzPlate = engine.plateById.get('p-lingzhi');
+  store.state.selectedPlateId = 'p-lingzhi';
+  map.camera.fit(lzPlate.bounds);
+  map.render({ state: store.state, evalResult: evalVisited, store });
+  assert.match(fakeSvg.innerHTML, /class="influence-line-risk"/, 'Lingzhi should draw red influence line to public risk source');
+
+  // 3. Civilization VI Landmark Aura Radiance (15-min walk + honest 30/40/50-min rail)
+  const auraLx = engine.landmarkAura('lm-liuxian');
+  assert.ok(auraLx && auraLx.walk15.has('p-liuxian') && auraLx.minutes === 30 && auraLx.rail30.size >= 10, 'Liuxian landmark aura should reach 10+ plates within 30 min rail');
+  const auraKx = engine.landmarkAura('lm-kexing');
+  assert.ok(auraKx && auraKx.minutes === 40 && auraKx.rail30.size >= 10, 'Kexing landmark aura should honestly adapt to 40 min and light up commuter plates');
+  const auraPg = engine.landmarkAura('lm-penguin');
+  assert.ok(auraPg && auraPg.minutes === 50 && auraPg.rail30.size >= 5, 'Penguin Island aura should honestly expand to feeder-reachable plates instead of 0');
+  store.state.selectedPlateId = '';
+  store.state.selectedLandmarkId = 'lm-kexing';
+  map.camera.reset();
+  map.render({ state: store.state, evalResult: evalVisited, store });
+  assert.match(fakeSvg.innerHTML, /class="landmark-aura-ring"/);
+
+  // 4. Radar lens: hub 15-min rings, migration arrows, zero 圈外, unmistakable ↑贵¥ (never +¥)
+  store.state.selectedLandmarkId = '';
   store.state.lens = 'radar';
-  map.render({ state: store.state, evalResult, store });
+  map.render({ state: store.state, evalResult: evalVisited, store });
   assert.match(fakeSvg.innerHTML, /rgba\(255,218,120,0\.13\)/);
   assert.match(fakeSvg.innerHTML, /科兴→企鹅岛/);
   assert.doesNotMatch(fakeSvg.innerHTML, /圈外/);
   assert.doesNotMatch(fakeSvg.innerHTML, /\+¥\d+/);
-  if (evalResult.plateRows.some(r => r.premium?.status === 'premium')) {
+  if (evalVisited.plateRows.some(r => r.premium?.status === 'premium')) {
     assert.match(fakeSvg.innerHTML, /↑贵¥\d+/);
   }
 
-  // 3. Radial 10-minute rings around arbitrary mall destination (万象天地)
+  // 5. Radial 10-minute rings around arbitrary mall destination (万象天地)
   store.state.work = '万象天地';
   store.state.lens = 'commute';
   store.state.layout = 'radial';
@@ -145,6 +190,7 @@ test('Built index.html has lossless packed driving matrix, valid JS syntax, stri
   const html = read('index.html');
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /id="atlas-v3-data"/);
+  assert.match(html, /id="hover-card"/);
   assert.match(html, /#atlas-svg :focus \{ outline: none; \}/);
   assert.match(html, /#atlas-svg text\.no-stroke \{ stroke: none;/);
 

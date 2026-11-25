@@ -569,11 +569,53 @@
         ((a.plate.unitPrice ?? 999) - (b.plate.unitPrice ?? 999))
       );
 
+      // Compute plate field-mastery status (saved / visited / avg stars across plate or its child estates)
+      for (const row of plateRows) {
+        const entries = [row.entry, ...row.childRows.map(c => c.entry)].filter(Boolean);
+        const anySaved = entries.some(e => e.saved);
+        const visited = entries.some(e => e.monthly || e.environment || e.convenience || e.note);
+        const stars = entries.flatMap(e => [e.environment, e.convenience]).filter(n => Number.isInteger(n));
+        const avgStar = stars.length ? Number((stars.reduce((s, n) => s + n, 0) / stars.length).toFixed(1)) : null;
+        row.mastery = { saved: anySaved, visited, avgStar };
+      }
+
       return {
         dest1, dest2, refRow,
         plateRows, plateRowById, placeRowById,
         eligiblePlates,
       };
+    }
+
+    // 《文明 6》地标辐射圈：默认 30 分钟轨交直达；若因接驳/长步行（如企鹅岛、科兴）不足 6 个板块，自动顺延至 40/50 分钟并如实标注阈值
+    const auraCache = new Map();
+    function landmarkAura(landmarkId) {
+      if (!landmarkId) return null;
+      if (auraCache.has(landmarkId)) return auraCache.get(landmarkId);
+      const lm = landmarkById.get(landmarkId);
+      if (!lm) return null;
+      const destObj = { name: lm.name, kind: '地标', coord: lm.coord };
+      const walk15 = new Set();
+      const timed = [];
+      for (const pl of atlas.plates) {
+        if (walk(meter(pl.coord, lm.coord)) <= 15) walk15.add(pl.id);
+        const rt = routeToDest(pl.id, pl.coord, pl.station, destObj, { mode: 'rail', access: 5, egress: 5 });
+        if (rt) timed.push([pl.id, rt.minutes]);
+      }
+      let minutes = 30;
+      let ids = timed.filter(([, m]) => m <= 30).map(([id]) => id);
+      if (ids.length < 6) {
+        minutes = 40;
+        ids = timed.filter(([, m]) => m <= 40).map(([id]) => id);
+      }
+      if (ids.length < 4) {
+        minutes = 50;
+        ids = timed.filter(([, m]) => m <= 50).map(([id]) => id);
+      }
+      const rail30 = new Set(ids);
+      const timeMap = new Map(timed);
+      const res = { landmark: lm, walk15, rail30, minutes, timeMap };
+      auraCache.set(landmarkId, res);
+      return res;
     }
 
     function discoverNext(evalResult, seenSet) {
@@ -589,7 +631,7 @@
 
     return {
       nodes, hubNodes, QUICK_DESTS, ALIASES, GRAIN_LABELS, FIT_NAMES, FIT_KEYS,
-      resolveDestination, searchDestinations, nearbyFacilities, evaluateAll, discoverNext,
+      resolveDestination, searchDestinations, nearbyFacilities, evaluateAll, landmarkAura, discoverNext,
       plateById, placeById, landmarkById, eventById, policyById, facById, riskById,
     };
   }

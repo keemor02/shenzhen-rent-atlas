@@ -16,6 +16,7 @@ const readJson = rel => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8')
 const base = readJson('data/base.json');
 const fine = readJson('data/fine.json');
 const journey = readJson('data/journey.json');
+const timing = readJson('data/timing.json');
 const facilitiesBase = readJson('data/facilities.json');
 const facilitiesExtra = readJson('sources/v2/facilities-extra.json');
 const policiesData = readJson('data/policies.json');
@@ -498,6 +499,26 @@ const districts = base.districts.map(d => ({
 }));
 const distInfoByName = new Map(districts.map(d => [d.n, d]));
 
+// Build station -> metro line numbers map + plate -> stations map for Civ 6 Banner metro Buffs!
+const stationToLines = new Map();
+for (const [lineId, info] of Object.entries(timing.lines || {})) {
+  for (const st of info.stations || []) {
+    if (!stationToLines.has(st)) stationToLines.set(st, new Set());
+    stationToLines.get(st).add(lineId);
+  }
+}
+const plateStations = new Map(plates.map(p => [p.id, new Set(p.station ? [p.station] : [])]));
+for (const [stName, , , ll] of base.stations) {
+  if (stName === '企鹅岛') continue;
+  const stId = fine.stStreet[stName];
+  if (!stId) continue;
+  const pid = resolvePlateId(stId, project(ll), stName);
+  if (plateStations.has(pid)) plateStations.get(pid).add(stName);
+}
+
+const landmarks = geoSpec.landmarks.map(l => ({ ...l, xy: project(l.coord) }));
+const mallLandmarks = landmarks.filter(l => l.kind === 'mall');
+
 for (const pl of plates) {
   const members = places.filter(p => p.plateId === pl.id);
   const namedPlaces = members.filter(p => !p.isMarketProxy);
@@ -517,7 +538,6 @@ for (const pl of plates) {
   }
 
   // Honest 元/㎡·月 calculation (NO made-up fake multipliers!):
-  // 1) Collect verified project / corridor band unit prices inside this exact plate
   const sampleUnits = [];
   for (const m of namedPlaces) {
     for (const r of m.rents) {
@@ -529,7 +549,6 @@ for (const pl of plates) {
 
   let unitPrice = null, unitBasis = '';
   if (sampleMedianUnit && (pl.clipId || !pl.refUnit)) {
-    // Sub-plate has real local housing samples (distinguishes 坪洲 vs 碧海, 留仙洞 vs 西丽中心, 沙尾 vs 车公庙!)
     unitPrice = sampleMedianUnit;
     unitBasis = '板块实采/参考带换算';
   } else if (pl.refUnit) {
@@ -546,6 +565,21 @@ for (const pl of plates) {
     unitBasis = `${pl.district}官方参考`;
   }
 
+  // Real metro lines serving this plate
+  const stSet = plateStations.get(pl.id) || new Set();
+  const lineSet = new Set();
+  for (const st of stSet) {
+    for (const ln of stationToLines.get(st) || []) lineSet.add(ln);
+  }
+  const lines = [...lineSet].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+
+  // Nearby verified commercial landmarks (within 1.8km -> Civ 6 🛍 Buff + Skylines green influence lines!)
+  const nearbyMalls = mallLandmarks
+    .map(m => ({ id: m.id, name: m.name, coord: m.coord, meters: Math.round(meter(pl.coord, m.coord)) }))
+    .filter(m => m.meters <= 1800)
+    .sort((a, b) => a.meters - b.meters)
+    .slice(0, 2);
+
   // Events, policies, facilities, risks mapped cleanly to this plate
   const plateEvents = [...new Set([
     ...members.flatMap(m => m.eventIds),
@@ -556,17 +590,30 @@ for (const pl of plates) {
     ...(policiesData.policies || []).filter(pol => (pol.sites || []).some(site => site.streetId === pl.streetId)).map(p => p.id),
   ])];
   const streetFacs = facilities.filter(f => f.streetId === pl.streetId);
+  const unlocatedStreetFacs = streetFacs.filter(f => !f.location?.gcj02);
+  const osmNearFacs = facilities.filter(f => f.location?.gcj02 && meter(pl.coord, f.location.gcj02) <= 2200);
+  const facCats = [...new Set([
+    ...unlocatedStreetFacs.map(f => f.category),
+    ...osmNearFacs.map(f => f.category),
+    ...(nearbyMalls.length ? ['mall'] : []),
+  ])];
+
   const plateRisks = [...new Set([
     ...members.flatMap(m => m.riskEventIds),
     ...publicEvents.filter(pe => {
-      const pxy = project(pe.coord);
-      return resolvePlateId(pl.streetId, pxy) === pl.id && meter(pe.coord, pl.coord) <= 2200;
+      const hitStation = (pe.near || []).some(st => stSet.has(st));
+      const radius = pe.id === 'airport-noise' ? 4200 : 1800;
+      const hitCoord = meter(pe.coord, pl.coord) <= radius && (!pl.clipId || resolvePlateId(pl.streetId, project(pe.coord)) === pl.id || pe.id === 'airport-noise');
+      return hitStation || hitCoord;
     }).map(e => e.id),
   ])];
 
   pl.unitPrice = unitPrice;
   pl.unitBasis = unitBasis;
   pl.verifiedUnit = sampleMedianUnit;
+  pl.lines = lines;
+  pl.malls = nearbyMalls;
+  pl.facCats = facCats;
   pl.trend = trend;
   pl.placeIds = namedPlaces.map(p => p.id);
   pl.allMemberIds = members.map(p => p.id);
@@ -584,7 +631,6 @@ const terrain = {
   water: geoSpec.water.map(w => ({ id: w.id, name: w.name, minZoom: w.minZoom, ...smoothClosedPath(w.coords) })),
   airport: { id: geoSpec.airport.id, name: geoSpec.airport.name, ...smoothClosedPath(geoSpec.airport.coords) },
 };
-const landmarks = geoSpec.landmarks.map(l => ({ ...l, xy: project(l.coord) }));
 
 // 5. Metro skeleton (all 16 real Shenzhen Metro lines from base.json!)
 const metroLines = Object.values(base.metro || {}).map(m => ({ id: m.id, p: m.p }));

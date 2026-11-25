@@ -157,7 +157,25 @@ a { color: var(--accent); text-underline-offset: 2px; }
 #atlas-svg text.no-stroke { stroke: none; stroke-width: 0; paint-order: normal; }
 #atlas-svg [data-plate], #atlas-svg [data-landmark], #atlas-svg [data-district], #atlas-svg [data-risk], #atlas-svg [data-fac] { cursor: pointer; }
 #atlas-svg .plate-shape:hover { stroke: #f7efc9; stroke-width: 2; }
+#atlas-svg .civ-banner:hover > rect:first-child { stroke: #fff3bc; stroke-width: 1.4; }
 #atlas-svg .landmark-pin:hover rect { stroke: #fff3bc; stroke-width: 1.3; }
+
+/* 《P 社 / 纪元》零点击悬停结构化属性卡 */
+.hover-card {
+  position: absolute; z-index: 45; pointer-events: none; width: 256px; padding: 9px 11px;
+  border-radius: 10px; background: rgba(12, 27, 31, 0.94); border: 1px solid rgba(132, 186, 176, 0.42);
+  color: #eaf4ef; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.46); backdrop-filter: blur(10px);
+  font-size: 12px; line-height: 1.45;
+}
+.hc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+.hc-head strong { font-size: 14px; color: #fff6d6; }
+.hc-price { font-weight: 700; color: #8ee5c7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hc-sub { font-size: 11px; color: #9abbb3; margin-bottom: 6px; }
+.hc-buffs, .hc-debuffs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.hc-tag { padding: 1px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+.hc-buff { background: rgba(40, 140, 114, 0.28); border: 1px solid rgba(98, 224, 182, 0.4); color: #bdf8e3; }
+.hc-debuff { background: rgba(176, 68, 46, 0.34); border: 1px solid rgba(242, 143, 110, 0.55); color: #ffd4c6; }
+.hc-foot { margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(132, 186, 176, 0.18); font-size: 10.5px; color: #89aba3; }
 
 /* 轻浮 HUD */
 .hud-top-left {
