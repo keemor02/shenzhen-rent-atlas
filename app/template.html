@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>深圳租房探索雷达</title>
-<style>{{v2/app.css}}</style>
+<title>深圳租房板块探索地图</title>
+<style>{{app/app.css}}</style>
 </head>
 <body>
 <header class="topbar" aria-label="探索控制栏">
@@ -16,7 +16,7 @@
     <div class="search-wrap" id="search-wrap">
       <div class="search-box">
         <span class="search-ico" aria-hidden="true">⌕</span>
-        <input id="omni-input" type="text" autocomplete="off" placeholder="设工作地或直达片区，如 留仙洞、坪洲…">
+        <input id="omni-input" type="text" autocomplete="off" placeholder="搜地标 / 商圈 / 地铁站 / 小区设为目的地…">
       </div>
       <div id="omni-pop" class="popover omni-pop" hidden></div>
     </div>
@@ -25,9 +25,9 @@
   </div>
 
   <div class="tb-filters" aria-label="核心筛选">
-    <label class="pill-field" title="月租上限（元）">
+    <label class="pill-field" title="月租预算上限（元）">
       <span>¥</span>
-      <input id="budget-input" type="number" min="500" max="100000" step="100" placeholder="预算不限">
+      <input id="budget-input" type="number" min="500" max="100000" step="100" placeholder="月租不限">
     </label>
 
     <select id="room-select" class="pill-select" aria-label="居室">
@@ -66,8 +66,8 @@
             <input id="limit-range" type="range" min="15" max="90" step="5" value="50">
           </label>
           <div class="f-row-2">
-            <label class="f-col"><span>第二工作地</span><input id="work2-input" type="text" list="work-options" autocomplete="off" placeholder="选填，如 前海"></label>
-            <label class="f-col f-narrow"><span>二程上限(分)</span><input id="limit2-input" type="number" min="10" max="120" step="5" placeholder="不限"></label>
+            <label class="f-col"><span>第二目的地</span><input id="work2-input" type="text" list="dest-options" autocomplete="off" placeholder="选填，如 企鹅岛"></label>
+            <label class="f-col"><span>二程上限(分)</span><input id="limit2-input" type="number" min="10" max="120" step="5" placeholder="不限"></label>
           </div>
           <div class="f-row-2">
             <label class="f-col"><span>面积下限(㎡)</span><input id="sqm-input" type="number" min="10" max="300" step="5" placeholder="不限"></label>
@@ -79,8 +79,8 @@
               </div>
             </label>
           </div>
-          <label class="f-check"><input id="verified-only" type="checkbox"> 仅看项目实采 / 官方保租基准</label>
-          <label class="f-check"><input id="opp-only" type="checkbox"> 只看有议价信号片区</label>
+          <label class="f-check"><input id="verified-only" type="checkbox"> 仅看含实采/官方保租的板块</label>
+          <label class="f-check"><input id="opp-only" type="checkbox"> 只看有议价信号板块</label>
           <div class="f-row">
             <span class="f-label">适配权重</span>
             <div class="weight-grid">
@@ -102,13 +102,12 @@
       <div id="help-pop" class="popover help-pop" hidden></div>
     </div>
   </div>
-  <datalist id="work-options"></datalist>
+  <datalist id="dest-options"></datalist>
 </header>
 
 <main class="stage" id="stage">
-  <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房探索地图，可缩放拖动"></svg>
+  <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房板块探索地图，可缩放拖动"></svg>
 
-  <!-- 左上角极简状态与悬停提示（不占版面，随悬停自然浮现） -->
   <div class="hud-top-left">
     <div class="hud-meta">
       <span id="explore-progress" class="hud-chip"></span>
@@ -118,7 +117,6 @@
     <div id="status-bar" class="hud-toast" role="status" hidden></div>
   </div>
 
-  <!-- 底部居中悬浮镜头坞：3 大互斥镜头 + 按需二级胶囊 + 紧凑图例 -->
   <div class="dock-bottom">
     <div id="sub-pill-row" class="sub-pill-row" hidden></div>
     <div class="lens-dock" id="lens-dock" role="tablist" aria-label="地图视角">
@@ -129,7 +127,6 @@
     <div id="map-legend" class="map-legend"></div>
   </div>
 
-  <!-- 右下角悬浮操作栈：缩放 + 叠加图层（设施/避坑） + 发现下一处 -->
   <div class="controls-bottom-right" id="map-controls">
     <div id="overlay-filter-row" class="overlay-filter-row" hidden></div>
     <div class="ctrl-stack">
@@ -139,33 +136,30 @@
         <button type="button" data-zoom="reset" title="全深圳">⛶</button>
       </div>
       <div class="overlay-toggles">
-        <button type="button" id="toggle-fac" class="layer-btn" aria-pressed="false" title="叠加核验设施（商场/学校/公园等）">设施</button>
-        <button type="button" id="toggle-risk" class="layer-btn" aria-pressed="true" title="叠加 6 类公共避坑图标">避坑</button>
+        <button type="button" id="toggle-fac" class="layer-btn" aria-pressed="false" title="叠加核验商场/学校/公园">设施</button>
+        <button type="button" id="toggle-risk" class="layer-btn" aria-pressed="false" title="叠加 6 类公共避坑图标">避坑</button>
       </div>
-      <button type="button" id="btn-discover" class="btn-discover">✦ 发现下一处</button>
+      <button type="button" id="btn-discover" class="btn-discover">✦ 发现下一板块</button>
     </div>
   </div>
 
-  <!-- 右侧按需滑出详情抽屉（平时完全收起，点击片区/街道/避坑点才浮出） -->
   <aside class="drawer" id="detail-drawer" aria-live="polite" hidden></aside>
-
-  <!-- 看房清单全屏覆盖层（随时切出，不丢当前地图缩放位置） -->
   <section id="watchlist-overlay" class="watchlist-overlay" hidden aria-label="我的看房清单"></section>
 </main>
 
-<script type="application/json" id="atlas-v2-data">{{data/atlas-v2.json}}</script>
+<script type="application/json" id="atlas-v3-data">{{data/atlas-v3.json}}</script>
 <script type="application/json" id="journey-data">{{data/journey.json}}</script>
 <script type="application/json" id="time-data">{{data/timing.json}}</script>
 <script>
-{{src/rail.js}}
-{{src/bus.js}}
-{{src/map-camera.js}}
+{{app/rail.js}}
+{{app/bus.js}}
+{{app/map-camera.js}}
 </script>
 <script>
-{{v2/store.js}}
-{{v2/engine.js}}
-{{v2/map.js}}
-{{v2/ui.js}}
+{{app/store.js}}
+{{app/engine.js}}
+{{app/map.js}}
+{{app/ui.js}}
 </script>
 </body>
 </html>

@@ -12,7 +12,7 @@
 
 ## 改动与验证
 
-先读 README 的「修改入口」。在 `src/`、数据输入或 `launcher.py` 编辑。更新街道资料时先运行 `node tools/rebuild_fine.cjs`。然后运行 `node tools/build.cjs`（或 `python tools/build.py`）、`node tools/build.cjs --check` 和 `node --test`。界面有变化时，打开生成的 `index.html` 验证选定工作地、切换图层、放大地块、查看政策原文和收藏恢复。
+先读 README 的「修改入口」。在 `app/`、`sources/` 数据输入或 `launcher.py` 编辑。更新板块/设施/租金数据时先运行 `node tools/build_data.cjs`。然后运行 `node tools/build.cjs`、`node tools/build.cjs --check` 和 `node --test`。界面有变化时，打开生成的 `index.html` 验证选定目的地、切换图层、点开板块、查看政策原文和收藏恢复。
 
 ## 多 Agent（Antigravity + Codex）协作约定
 

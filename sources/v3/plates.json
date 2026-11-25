@@ -1,0 +1,135 @@
+{
+  "asOf": "2026-11-25",
+  "note": "将深圳 15 个核心大街道按真实居住板块与地铁站锚点无缝切分为严丝合缝的拼图板块，其余 59 个街道天然对应单板块（共 98 块全城无缝拼图）",
+  "splits": [
+    {
+      "streetId": "440306018000",
+      "streetName": "西乡街道",
+      "plates": [
+        { "id": "p-bihai", "name": "碧海", "anchor": "碧海湾", "unitAdj": 1.06, "tag": "地铁11号线快线·品质小区集中" },
+        { "id": "p-pingzhou", "name": "坪洲", "anchor": "坪洲", "unitAdj": 0.94, "tag": "大仟里商圈·高密度城中村与小区" },
+        { "id": "p-xixiang", "name": "西乡中心", "anchor": "西乡", "unitAdj": 1.00, "tag": "老西乡成熟生活圈" },
+        { "id": "p-gushu", "name": "固戍", "anchor": "固戍", "unitAdj": 0.88, "tag": "1号线低门槛城中村主力带" }
+      ]
+    },
+    {
+      "streetId": "440306017000",
+      "streetName": "新安街道",
+      "plates": [
+        { "id": "p-baozhong", "name": "宝安中心", "anchor": "宝安中心", "unitAdj": 1.15, "tag": "壹方城·欢乐港湾·前海溢出次新盘" },
+        { "id": "p-fanshen", "name": "翻身", "anchor": "翻身", "unitAdj": 0.90, "tag": "5号线美食烟火气·城中村/老小区" },
+        { "id": "p-lingzhi", "name": "灵芝·新安湖", "anchor": "新安公园", "unitAdj": 1.00, "tag": "5/12号线换乘·成熟花园与公园" },
+        { "id": "p-xingdong", "name": "兴东·洪浪北", "anchor": "兴东", "unitAdj": 0.95, "tag": "啤酒小镇周边·近留仙洞一站" }
+      ]
+    },
+    {
+      "streetId": "440305009000",
+      "streetName": "西丽街道",
+      "plates": [
+        { "id": "p-liuxian", "name": "留仙洞", "anchor": "留仙洞", "unitAdj": 1.06, "tag": "总部基地+创智云城保租房核心" },
+        { "id": "p-xilicenter", "name": "西丽中心", "anchor": "西丽", "unitAdj": 0.96, "tag": "5/7号线交汇·官龙/茶光性价比带" },
+        { "id": "p-baimang", "name": "白芒·西丽北", "anchor": "茶光", "coord": [113.939, 22.613], "unitAdj": 0.78, "tag": "西丽水库北侧低密度村落" }
+      ]
+    },
+    {
+      "streetId": "440305008000",
+      "streetName": "桃源街道",
+      "plates": [
+        { "id": "p-univtown", "name": "大学城·塘朗", "anchor": "大学城", "unitAdj": 1.02, "tag": "高校人文安静·塘朗山脚" },
+        { "id": "p-zhuguang", "name": "珠光·龙井", "anchor": "珠光", "unitAdj": 0.95, "tag": "7号线直通车公庙/科技园北" }
+      ]
+    },
+    {
+      "streetId": "440305007000",
+      "streetName": "粤海街道",
+      "plates": [
+        { "id": "p-gaoxinyuan", "name": "高新园·科兴", "anchor": "高新园", "unitAdj": 1.02, "tag": "万象天地/大冲·互联网核心区" },
+        { "id": "p-shenda", "name": "深大·科技南", "anchor": "深大", "unitAdj": 0.98, "tag": "软件产业基地·科技生态园" },
+        { "id": "p-houhai", "name": "后海·海岸城", "anchor": "后海", "unitAdj": 1.06, "tag": "海岸城/人才公园·高端滨海住区" }
+      ]
+    },
+    {
+      "streetId": "440305002000",
+      "streetName": "南山街道",
+      "plates": [
+        { "id": "p-qianhai", "name": "前海·桂湾", "anchor": "桂湾", "unitAdj": 1.12, "tag": "前海金融峡谷·次新公寓与大平层" },
+        { "id": "p-nanyou", "name": "南油·南山中心", "anchor": "南油", "unitAdj": 0.96, "tag": "9/12号线成熟宜居·老小区与城中村" },
+        { "id": "p-qianwan", "name": "前湾·妈湾", "anchor": "前湾", "unitAdj": 0.94, "tag": "前海新兴开发走廊" }
+      ]
+    },
+    {
+      "streetId": "440305006000",
+      "streetName": "招商街道",
+      "plates": [
+        { "id": "p-seaworld", "name": "海上世界", "anchor": "海上世界", "unitAdj": 1.05, "tag": "蛇口滨海国际化社区" },
+        { "id": "p-huaguoshan", "name": "花果山·四海", "anchor": "花果山", "unitAdj": 0.92, "tag": "12号线成熟老蛇口生活区" }
+      ]
+    },
+    {
+      "streetId": "440304005000",
+      "streetName": "沙头街道",
+      "plates": [
+        { "id": "p-chegongmiao", "name": "车公庙", "anchor": "车公庙", "unitAdj": 1.08, "tag": "4线换乘商务核心" },
+        { "id": "p-shawei", "name": "上下沙·沙尾", "anchor": "沙尾", "unitAdj": 0.86, "tag": "福田7号线超高性价比城中村与小区" },
+        { "id": "p-xinzhou", "name": "新洲·石厦", "anchor": "石厦", "unitAdj": 0.98, "tag": "成熟居家大社区" }
+      ]
+    },
+    {
+      "streetId": "440304008000",
+      "streetName": "莲花街道",
+      "plates": [
+        { "id": "p-jingtian", "name": "景田", "anchor": "景田", "unitAdj": 0.94, "tag": "2/9号线安静成熟老小区" },
+        { "id": "p-civic", "name": "市民中心", "anchor": "市民中心", "unitAdj": 1.08, "tag": "福田中心中轴" }
+      ]
+    },
+    {
+      "streetId": "440304004000",
+      "streetName": "福田街道",
+      "plates": [
+        { "id": "p-gangxia", "name": "岗厦·会展", "anchor": "岗厦北", "unitAdj": 1.06, "tag": "深圳之眼4线枢纽·CBD核心" },
+        { "id": "p-huanggang", "name": "皇岗·水围", "anchor": "福民", "unitAdj": 0.90, "tag": "口岸烟火气·福田高性价比住区" }
+      ]
+    },
+    {
+      "streetId": "440309002000",
+      "streetName": "民治街道",
+      "plates": [
+        { "id": "p-hongshan", "name": "红山", "anchor": "红山", "unitAdj": 1.08, "tag": "龙华次新品质大盘与6979商圈" },
+        { "id": "p-minzhi", "name": "深圳北·民治", "anchor": "深圳北站", "unitAdj": 0.96, "tag": "高铁与4/5/6号线通勤主力带" },
+        { "id": "p-minle", "name": "梅林关·民乐", "anchor": "民乐", "unitAdj": 0.92, "tag": "进福田第一站" }
+      ]
+    },
+    {
+      "streetId": "440309003000",
+      "streetName": "龙华街道",
+      "plates": [
+        { "id": "p-qinghu", "name": "清湖", "anchor": "清湖", "unitAdj": 0.94, "tag": "4号线成熟配套带" },
+        { "id": "p-longhuacenter", "name": "龙华中心", "anchor": "龙华", "unitAdj": 1.04, "tag": "壹方天地超大型商圈" }
+      ]
+    },
+    {
+      "streetId": "440307013000",
+      "streetName": "坂田街道",
+      "plates": [
+        { "id": "p-wuhe", "name": "五和·坂田南", "anchor": "五和", "unitAdj": 0.96, "tag": "5/10号线直通福田与南山" },
+        { "id": "p-huaweibantian", "name": "华为·坂田北", "anchor": "岗头", "unitAdj": 1.04, "tag": "华为总部周边科创住区" }
+      ]
+    },
+    {
+      "streetId": "440307015000",
+      "streetName": "龙城街道",
+      "plates": [
+        { "id": "p-dayun", "name": "大运", "anchor": "大运", "unitAdj": 1.08, "tag": "14号线快线·东部大学城" },
+        { "id": "p-longgangcenter", "name": "龙岗中心城", "anchor": "吉祥", "unitAdj": 0.94, "tag": "龙岗成熟低密度宜居城" }
+      ]
+    },
+    {
+      "streetId": "440306019000",
+      "streetName": "航城街道",
+      "plates": [
+        { "id": "p-hourui", "name": "后瑞·黄田", "anchor": "后瑞", "unitAdj": 0.96, "tag": "近机场1号线站口" },
+        { "id": "p-zhongwu", "name": "钟屋·草围", "anchor": "钟屋南", "unitAdj": 1.02, "tag": "12号线直达南山宝安" }
+      ]
+    }
+  ]
+}

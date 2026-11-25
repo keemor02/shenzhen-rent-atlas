@@ -1,12 +1,12 @@
 {
   "name": "shenzhen-rent-atlas",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "深圳租房探索与议价雷达（单文件离线原型）",
+  "description": "深圳租房板块拼图探索地图（单文件离线版）",
   "scripts": {
-    "data": "node tools/build_v2_data.cjs",
-    "build": "node tools/build_v2_data.cjs && node tools/build_v2.cjs",
-    "check": "node tools/build_v2.cjs --check",
-    "test": "node --test tests/v2.test.cjs tests/phase2-3-4.test.cjs tests/transport.test.cjs"
+    "data": "node tools/build_data.cjs",
+    "build": "node tools/build_data.cjs && node tools/build.cjs",
+    "check": "node tools/build.cjs --check",
+    "test": "node --test"
   }
 }

@@ -10,9 +10,10 @@ const read = name => JSON.parse(readFileSync(join(project, 'data', name + '.json
 const base = read('base'), timing = read('timing'), journey = read('journey');
 const browser = vm.createContext({});
 browser.window = browser;
-for (const file of ['rail', 'bus', 'world']) {
-  vm.runInContext(readFileSync(join(project, 'src', file + '.js'), 'utf8'), browser);
+for (const file of ['rail', 'bus']) {
+  vm.runInContext(readFileSync(join(project, 'app', file + '.js'), 'utf8'), browser);
 }
+browser.worldEvents = JSON.parse(readFileSync(join(project, 'sources', 'v3', 'public-events.json'), 'utf8')).events;
 
 test('all six published metro feeders work in both directions on the rail and bus networks', () => {
   const planner = browser.makeRailPlanner(base, timing);

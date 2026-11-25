@@ -1,44 +1,45 @@
-/* V2.5 统一状态中心与本地持久化：自动兼容并无损迁移旧版收藏和看房手记 */
+/* V3 统一状态中心与本地持久化：自动兼容旧版收藏/看房手记，支持任意板块、楼盘与地标目的地 */
 (function (global) {
   'use strict';
 
-  const SESSION_KEY = 'shenzhen-rent-atlas.v2.session';
-  const JOURNAL_KEY = 'shenzhen-rent-atlas.journal.v1'; // 保持与旧版同一个 Key，老收藏和看房手记无缝延续！
+  const SESSION_KEY = 'shenzhen-rent-atlas.v3.session';
+  const JOURNAL_KEY = 'shenzhen-rent-atlas.journal.v1'; // 保持与历代版本相同 Key，老收藏和踩点笔记零丢失
   const FORMAT = 'shenzhen-rent-journal';
 
   function createStore(onChange) {
     const state = {
-      lens: 'rent',             // rent | commute | radar (3大互斥核心镜头)
-      rentSub: 'now',           // now | yoy | mom | macro
+      lens: 'rent',             // rent | commute | radar
+      rentSub: 'unit',          // unit (每平米均价) | yoy | mom | macro
       macroMetric: 'community', // community | apartment | village | listing | ref2022 | density
       layout: 'geo',            // geo | radial (10分钟时间圈)
-      showFacilities: false,    // 独立叠加图层：核验设施（商场/学校/公园等）
-      facFilter: '',            // '' | mall | school | park | market | supermarket | health | pharmacy
-      showRisks: true,          // 独立叠加图层：6类公开避坑图标
-      riskFilter: '',           // '' | works | air | rail | flight | crowd | noise
-      watchlistOpen: false,     // 看房清单全屏覆盖层
-      work: '',
+      showFacilities: false,    // 叠加核验设施
+      facFilter: '',
+      showRisks: false,         // 默认关闭散落避坑图标，按需一键叠加（让拼图本身极度干净！）
+      riskFilter: '',
+      watchlistOpen: false,
+      work: '',                 // 任意地标/商圈/地铁站/公交站/小区/板块名
       work2: '',
       mode: 'rail',             // rail | bus | drive
       limit: 50,
       limit2: 0,
       access: 5,
       egress: 5,
-      budget: 0,
+      budget: 0,                // 月租上限（用于在板块内筛选与适配评分）
       room: '1',
       sqm: 0,
       housingTypes: ['village', 'oldEstate', 'modernEstate', 'apartment'],
       verifiedOnly: false,
       oppOnly: false,
-      usedHubs: [],             // 用户点击「我常去这个园区」的园区名称列表
-      referencePlaceId: '',     // 用户点击「设为参照」的片区 ID
+      usedHubs: [],
+      referenceId: '',          // 参照板块或小区 ID
       weights: { commute: 1, rent: 1, environment: 1, convenience: 1 },
-      selectedPlaceId: '',
-      selectedStreetId: '',
+      selectedPlateId: '',
+      selectedPlaceId: '',      // 板块内点开具体某小区/村落
+      selectedLandmarkId: '',
       selectedDistrict: '',
       selectedRiskId: '',
       selectedFacilityId: '',
-      focusSection: '',         // '' | 'evidence' | 'note'
+      focusSection: '',
       seen: new Set(),
       status: '',
     };
@@ -46,12 +47,8 @@
     const journal = new Map();
     let chosenId = '';
 
-    function readLS(k) {
-      try { return global.localStorage?.getItem(k) ?? null; } catch { return null; }
-    }
-    function writeLS(k, v) {
-      try { global.localStorage?.setItem(k, v); return true; } catch { return false; }
-    }
+    const readLS = k => { try { return global.localStorage?.getItem(k) ?? null; } catch { return null; } };
+    const writeLS = (k, v) => { try { global.localStorage?.setItem(k, v); return true; } catch { return false; } };
 
     function loadJournal() {
       const raw = readLS(JOURNAL_KEY);
@@ -84,13 +81,12 @@
     }
 
     function saveJournal() {
-      const payload = {
+      writeLS(JOURNAL_KEY, JSON.stringify({
         format: FORMAT,
         version: 1,
         chosenId,
         entries: [...journal.values()].map(e => ({ ...e, chosen: e.id === chosenId })),
-      };
-      writeLS(JOURNAL_KEY, JSON.stringify(payload));
+      }));
     }
 
     function loadSession() {
@@ -100,7 +96,7 @@
         const s = JSON.parse(raw);
         if (!s || typeof s !== 'object') return;
         if (['rent', 'commute', 'radar'].includes(s.lens)) state.lens = s.lens;
-        if (['now', 'yoy', 'mom', 'macro'].includes(s.rentSub)) state.rentSub = s.rentSub;
+        if (['unit', 'yoy', 'mom', 'macro'].includes(s.rentSub)) state.rentSub = s.rentSub;
         if (['community', 'apartment', 'village', 'listing', 'ref2022', 'density'].includes(s.macroMetric)) state.macroMetric = s.macroMetric;
         if (['geo', 'radial'].includes(s.layout)) state.layout = s.layout;
         if (typeof s.showFacilities === 'boolean') state.showFacilities = s.showFacilities;
@@ -121,7 +117,7 @@
         state.verifiedOnly = s.verifiedOnly === true;
         state.oppOnly = s.oppOnly === true;
         if (Array.isArray(s.usedHubs)) state.usedHubs = [...new Set(s.usedHubs.filter(x => typeof x === 'string'))];
-        if (typeof s.referencePlaceId === 'string') state.referencePlaceId = s.referencePlaceId;
+        if (typeof s.referenceId === 'string') state.referenceId = s.referenceId;
         if (s.weights && typeof s.weights === 'object') {
           for (const k of ['commute', 'rent', 'environment', 'convenience']) {
             if ([1, 2, 3].includes(Number(s.weights[k]))) state.weights[k] = Number(s.weights[k]);
@@ -138,7 +134,7 @@
         work: state.work, work2: state.work2, mode: state.mode, limit: state.limit, limit2: state.limit2,
         access: state.access, egress: state.egress, budget: state.budget, room: state.room, sqm: state.sqm,
         housingTypes: state.housingTypes, verifiedOnly: state.verifiedOnly, oppOnly: state.oppOnly,
-        usedHubs: state.usedHubs, referencePlaceId: state.referencePlaceId, weights: state.weights,
+        usedHubs: state.usedHubs, referenceId: state.referenceId, weights: state.weights,
         seen: [...state.seen],
       }));
     }
@@ -156,7 +152,7 @@
       if (added) cur.add(hubName);
       else cur.delete(hubName);
       state.usedHubs = [...cur];
-      state.status = added ? `已标记常去「${hubName}」，不再计入溢价提醒` : `已取消常去「${hubName}」`;
+      state.status = added ? `已标记常去「${hubName}」，取消溢价扣分` : `已取消常去「${hubName}」`;
       saveSession();
       onChange?.();
       return added;
@@ -186,7 +182,7 @@
         journal.set(id, prev);
       }
       saveJournal();
-      state.status = prev.saved ? `已加入看房清单：${prev.name}` : `已移除：${prev.name}`;
+      state.status = prev.saved ? `已收藏：${prev.name}` : `已移除：${prev.name}`;
       onChange?.();
       return prev.saved;
     }
@@ -217,9 +213,7 @@
 
     function exportBackup() {
       return JSON.stringify({
-        format: FORMAT,
-        version: 1,
-        chosenId,
+        format: FORMAT, version: 1, chosenId,
         entries: [...journal.values()].map(e => ({ ...e, chosen: e.id === chosenId })),
       }, null, 2);
     }
@@ -235,28 +229,21 @@
         const existing = journal.get(item.id);
         if (!existing || String(item.updatedAt || '') >= String(existing.updatedAt || '')) {
           journal.set(item.id, {
-            id: String(item.id),
-            name: String(item.name),
-            saved: item.saved === true,
-            chosen: item.chosen === true,
-            manual: item.manual === true,
+            id: String(item.id), name: String(item.name),
+            saved: item.saved === true, chosen: item.chosen === true, manual: item.manual === true,
             station: String(item.station || ''),
             monthly: Number.isFinite(Number(item.monthly)) && item.monthly != null && item.monthly !== '' ? Number(item.monthly) : null,
             sqm: Number.isFinite(Number(item.sqm)) && item.sqm != null && item.sqm !== '' ? Number(item.sqm) : null,
             rooms: Number.isInteger(Number(item.rooms)) ? Number(item.rooms) : null,
             environment: Number.isInteger(item.environment) && item.environment >= 1 && item.environment <= 5 ? item.environment : null,
             convenience: Number.isInteger(item.convenience) && item.convenience >= 1 && item.convenience <= 5 ? item.convenience : null,
-            issue: String(item.issue || ''),
-            note: String(item.note || '').slice(0, 1200),
-            observed: String(item.observed || ''),
-            updatedAt: String(item.updatedAt || new Date().toISOString()),
+            issue: String(item.issue || ''), note: String(item.note || '').slice(0, 1200),
+            observed: String(item.observed || ''), updatedAt: String(item.updatedAt || new Date().toISOString()),
           });
           merged++;
         }
       }
-      if (!chosenId && typeof parsed.chosenId === 'string' && journal.has(parsed.chosenId)) {
-        chosenId = parsed.chosenId;
-      }
+      if (!chosenId && typeof parsed.chosenId === 'string' && journal.has(parsed.chosenId)) chosenId = parsed.chosenId;
       saveJournal();
       state.status = `已导入并合并 ${merged} 条记录`;
       onChange?.();
@@ -278,5 +265,5 @@
     };
   }
 
-  global.createV2Store = createStore;
+  global.createV3Store = createStore;
 })(typeof window !== 'undefined' ? window : globalThis);
