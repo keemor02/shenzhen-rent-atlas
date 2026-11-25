@@ -5,7 +5,7 @@ function atlasExtent(boxes) {
 
 function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null) {
   let cx, cy, zoom, frame=0, settleTimer=0, dragged=false, blockClick=false;
-  let initial=null;
+  let initial=null, lastTapTime=0, lastTapPt=null;
   const pointers=new Map();
   const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
   const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -16,10 +16,16 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     const k=unit*zoom, tx=w/2-cx*k, ty=h/2-cy*k;
     return {w,h,k,tx,ty,pt:p=>[p[0]*k+tx,p[1]*k+ty],worldAt:p=>[(p[0]-tx)/k,(p[1]-ty)/k]};
   }
-  function fit(box=world) {
+  function fit(box=world, opt={}) {
+    const padB=Math.max(0, Number(opt?.padBottom)||0);
     cx=(box[0]+box[2])/2;cy=(box[1]+box[3])/2;zoom=1;
     const {k,w,h}=viewport();
-    zoom=clamp(Math.min((w-28)/Math.max(18,box[2]-box[0]),(h-28)/Math.max(16,box[3]-box[1]))/k,1,42);
+    const availH=Math.max(120, h-28-padB);
+    zoom=clamp(Math.min((w-28)/Math.max(18,box[2]-box[0]),availH/Math.max(16,box[3]-box[1]))/k,1,42);
+    if(padB>0){
+      const k2=viewport().k;
+      cy=clamp(cy+(padB/2)/k2, world[1], world[3]);
+    }
   }
   function flushSettle() {
     if(settleTimer){clearTimeout(settleTimer);settleTimer=0;}
@@ -78,7 +84,8 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
   svg.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;
     const from=gesture();pointers.set(e.pointerId,local(e));const to=gesture();
-    if(!dragged && distance(to.mid,initial.mid)<5)return;
+    const thresh=e.pointerType==='touch'?9:5;
+    if(!dragged && pointers.size<2 && distance(to.mid,initial.mid)<thresh)return;
     const start=dragged?from:initial;
     dragged=true;svg.setPointerCapture?.(e.pointerId);
     svg.classList.add('panning');
@@ -89,6 +96,16 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     if(pointers.size){initial=gesture();return;}
     const wasDragged=dragged;
     blockClick=dragged;dragged=false;initial=null;svg.classList.remove('panning');
+    // Touch double-tap on bare map background zooms in smoothly around finger point
+    if(!wasDragged && e.type==='pointerup' && e.pointerType==='touch' && e.target===svg){
+      const now=Date.now(), ptNow=local(e);
+      if(lastTapPt && now-lastTapTime<320 && distance(ptNow,lastTapPt)<30){
+        lastTapTime=0; lastTapPt=null;
+        move(1.85,0,0,ptNow,false);
+        return;
+      }
+      lastTapTime=now; lastTapPt=ptNow;
+    }
     if(wasDragged&&settleTimer){flushSettle();redraw(false);}
   }
   for(const name of ['pointerup','pointercancel'])svg.addEventListener(name,end);

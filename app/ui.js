@@ -108,11 +108,12 @@
       const sBox = $('#search-box');
       const sWrap = $('#search-wrap');
       const curWork = evalResult.dest1?.name || '';
+      const isMobile = () => (global.innerWidth || 1200) <= 820;
       if (evalResult.dest1) {
         hub.hidden = false;
         sBox.classList.remove('needs-dest');
         sWrap.classList.add('compact');
-        $('#omni-input').placeholder = '切换目的地或搜片区…';
+        $('#omni-input').placeholder = isMobile() ? '切换目的地/片区…' : '切换目的地或搜片区…';
         wp.innerHTML = `<span class="dot">★</span><span>去往 · ${esc(shortDestName(curWork))}</span><button type="button" data-clear-work title="清除目的地">×</button>`;
         if (curWork !== prevWorkName) {
           hub.classList.remove('just-unlocked');
@@ -124,7 +125,7 @@
         hub.classList.remove('just-unlocked');
         sBox.classList.add('needs-dest');
         sWrap.classList.remove('compact');
-        $('#omni-input').placeholder = '① 先设目的地（园区 / 商圈 / 地铁 / 小区）…';
+        $('#omni-input').placeholder = isMobile() ? '① 先设通勤目的地…' : '① 先设目的地（园区 / 商圈 / 地铁 / 小区）…';
       }
       prevWorkName = curWork;
 
@@ -651,7 +652,9 @@
       }
 
       if (html) {
-        el.innerHTML = html;
+        const wasHidden = el.hidden;
+        el.innerHTML = `<div class="sheet-handle" data-sheet-handle role="button" tabindex="0" aria-label="拖动调整抽屉高度或下滑关闭"></div>` + html;
+        if (wasHidden) el.classList.remove('sheet-tall');
         el.hidden = false;
         stage.classList.add('drawer-open');
         const form = $('#place-note-form');
@@ -666,6 +669,7 @@
         };
       } else {
         el.hidden = true;
+        el.classList.remove('sheet-tall');
         stage.classList.remove('drawer-open');
       }
     }
@@ -759,12 +763,18 @@
       });
     }
 
+    function fitForDrawer(bounds) {
+      const mobileSheet = (global.innerWidth || 1200) <= 820;
+      const padBottom = mobileSheet ? Math.round(($('#stage')?.clientHeight || 600) * 0.54) : 0;
+      map.camera.fit(bounds, { padBottom });
+    }
+
     function selectPlate(plateId, fitCamera = false) {
       const pl = engine.plateById.get(plateId);
       if (!pl) return;
       state.seen.add(plateId);
       fitExpanded = false; noteFormOpen = false;
-      if (fitCamera) map.camera.fit(pl.bounds);
+      if (fitCamera || (global.innerWidth || 1200) <= 820) fitForDrawer(pl.bounds);
       store.patch({
         watchlistOpen: false, macroOpen: false,
         selectedPlateId: plateId, selectedPlaceId: '', selectedLandmarkId: '',
@@ -778,7 +788,7 @@
       const pl = engine.plateById.get(p.plateId);
       if (pl) state.seen.add(pl.id);
       noteFormOpen = false;
-      if (fitCamera && pl) map.camera.fit(pl.bounds);
+      if (fitCamera && pl) fitForDrawer(pl.bounds);
       store.patch({
         watchlistOpen: false, macroOpen: false,
         selectedPlateId: p.plateId, selectedPlaceId: placeId, selectedLandmarkId: '',
@@ -1074,7 +1084,9 @@
     }
 
     svgEl.addEventListener('pointermove', ev => {
-      if (svgEl.classList.contains('panning') || ev.target.closest?.('.map-dest-cta')) { hCard.hidden = true; lastHoverKey = ''; return; }
+      if (ev.pointerType !== 'mouse' || svgEl.classList.contains('panning') || ev.target.closest?.('.map-dest-cta')) {
+        hCard.hidden = true; lastHoverKey = ''; return;
+      }
       const t = ev.target.closest?.('[data-aff],[data-plate],[data-landmark],[data-district],[data-risk],[data-fac]');
       const key = t ? (t.dataset.aff || t.dataset.plate || t.dataset.landmark || t.dataset.risk || t.dataset.fac || t.dataset.district || '') : '';
       if (!key) { hCard.hidden = true; lastHoverKey = ''; return; }
@@ -1087,6 +1099,42 @@
       positionHoverCard(ev);
     });
     svgEl.addEventListener('pointerleave', () => { hCard.hidden = true; lastHoverKey = ''; });
+
+    // 移动端 Bottom Sheet 抽屉手势：轻点手柄展开/半屏，上滑拉高至 86dvh，下滑收起或关闭
+    const drawerEl = $('#detail-drawer');
+    let sheetStartY = null, sheetMoved = false;
+    drawerEl.addEventListener('pointerdown', ev => {
+      const onHandle = !!ev.target.closest('[data-sheet-handle],[data-close-drawer],.drawer-head');
+      if (!onHandle || ev.target.closest('button,a')) return;
+      sheetStartY = ev.clientY;
+      sheetMoved = false;
+    });
+    drawerEl.addEventListener('pointermove', ev => {
+      if (sheetStartY == null) return;
+      if (Math.abs(ev.clientY - sheetStartY) > 12) sheetMoved = true;
+    });
+    drawerEl.addEventListener('pointerup', ev => {
+      if (sheetStartY == null) return;
+      const dy = ev.clientY - sheetStartY;
+      const onHandle = !!ev.target.closest('[data-sheet-handle]');
+      sheetStartY = null;
+      if (dy > 62) {
+        if (drawerEl.classList.contains('sheet-tall')) drawerEl.classList.remove('sheet-tall');
+        else clearSelection();
+      } else if (dy < -44) {
+        drawerEl.classList.add('sheet-tall');
+      } else if (!sheetMoved && onHandle) {
+        drawerEl.classList.toggle('sheet-tall');
+      }
+    });
+    drawerEl.addEventListener('pointercancel', () => { sheetStartY = null; sheetMoved = false; });
+
+    // 视口尺寸/横竖屏变化时自适应重绘（适配手机地址栏伸缩与横竖屏切换）
+    let resizeTimer = 0;
+    global.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (evalResult) refresh(); }, 120);
+    });
     // 地图右键任意板块/地标/设施：直接一键设为通勤目的地！
     svgEl.addEventListener('contextmenu', ev => {
       const t = ev.target.closest?.('[data-plate],[data-landmark],[data-fac]');

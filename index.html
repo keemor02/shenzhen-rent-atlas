@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f2328">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <title>深圳租房板块探索地图</title>
@@ -42,17 +45,23 @@
     --shadow: 0 12px 36px rgba(0, 0, 0, 0.48);
   }
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; overflow: hidden; background: #0f2328; color: var(--fg); font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+html { height: 100%; overflow: hidden; background: #0f2328; }
+body {
+  display: flex; flex-direction: column; height: 100%; height: 100dvh; margin: 0; overflow: hidden;
+  background: #0f2328; color: var(--fg);
+  font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  overscroll-behavior: none;
+}
 button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; }
 a { color: var(--accent); text-underline-offset: 2px; }
 
-/* 唯一纤细顶栏 */
+/* 唯一纤细顶栏（自动适应桌面单行 & 移动端安全区双行，无需硬编码 calc 高度） */
 .topbar {
-  height: 52px; padding: 0 12px; display: flex; align-items: center; gap: 10px;
-  background: var(--bg); border-bottom: 1px solid var(--line); position: relative; z-index: 40;
+  min-height: 52px; padding: env(safe-area-inset-top) 12px 0; display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line); position: relative; z-index: 40; flex-shrink: 0;
 }
 .tb-left, .tb-filters, .tb-right { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .tb-left { flex: 1 1 auto; }
@@ -220,7 +229,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .help-pop p:last-child { margin: 0; }
 
 /* 全屏拼图舞台 */
-.stage { position: relative; width: 100%; height: calc(100vh - 52px); overflow: hidden; background: #0f2328; }
+.stage { position: relative; width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #0f2328; }
 #atlas-svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: grab; outline: none; }
 #atlas-svg.panning { cursor: grabbing; }
 #atlas-svg :focus { outline: none; }
@@ -296,9 +305,9 @@ a { color: var(--accent); text-underline-offset: 2px; }
   color: #e9fbf3; font-size: 12px; width: fit-content; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
-/* 底部悬浮镜头坞 */
+/* 底部悬浮镜头坞（z-index 26 确保标点与事件浮层盖过右下缩放钮，同时低于抽屉 30） */
 .dock-bottom {
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 25;
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 26;
   display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: calc(100vw - 24px);
 }
 .sub-pill-row {
@@ -597,20 +606,123 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .wl-table thead th { background: var(--surface); }
 .wl-table tbody th { width: 92px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 
-@media (max-width: 1120px) {
-  .topbar { height: auto; flex-wrap: wrap; padding: 6px 10px; gap: 6px; }
-  .stage { height: calc(100vh - 94px); }
+/* 移动端底部拉起面板拖动手柄（桌面隐藏，小屏展示） */
+.sheet-handle {
+  display: none; width: 100%; padding: 6px 0 8px; margin: -6px 0 4px;
+  justify-content: center; align-items: center; cursor: grab; touch-action: none;
 }
+.sheet-handle::before {
+  content: ''; width: 38px; height: 4px; border-radius: 99px; background: var(--line); display: block;
+}
+
+@media (hover: none) {
+  .hover-card { display: none !important; }
+}
+
+@media (max-width: 1120px) {
+  .topbar { flex-wrap: wrap; padding: calc(6px + env(safe-area-inset-top)) 10px 6px; gap: 6px; }
+}
+
 @media (max-width: 820px) {
-  .topbar { height: auto; flex-wrap: wrap; padding: 6px 8px; gap: 6px; }
-  .stage { height: calc(100vh - 110px); }
+  /* 防止 iOS 聚焦输入框时自动缩放页面 */
+  input, select, textarea { font-size: 16px; }
+
+  .topbar {
+    flex-wrap: wrap; padding: calc(6px + env(safe-area-inset-top)) 8px 6px; gap: 6px; min-height: 46px;
+  }
   .brand-mark { display: none; }
-  .search-wrap, .search-wrap.compact { width: 100%; flex: 1 1 180px; }
-  .commute-hub { flex-wrap: wrap; border-radius: 10px; }
-  .drawer { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 62vh; }
-  .stage.drawer-open .controls-bottom-right { right: 14px; }
-  .dock-bottom { bottom: 10px; }
-  .map-legend { display: none; }
+  .tb-left { flex: 1 1 auto; gap: 6px; flex-wrap: wrap; }
+  .tb-filters, .tb-right { gap: 5px; flex-shrink: 0; }
+  .wl-lbl { display: none; }
+  .search-wrap, .search-wrap.compact { flex: 1 1 120px; width: auto; min-width: 110px; order: 1; }
+  .search-box { height: 36px; padding: 0 9px; }
+  .search-box input { font-size: 14px; }
+  .pill-btn { height: 34px; padding: 0 9px; font-size: 12px; }
+  .icon-btn { width: 34px; height: 34px; }
+
+  /* 移动端联动通勤条：单行丝滑横向滚动，永不撑爆成 3–4 行 */
+  .commute-hub {
+    order: 10; flex: 1 0 100%; max-width: 100%; width: 100%;
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-radius: 10px; padding: 3px 6px; gap: 5px;
+  }
+  .commute-hub::-webkit-scrollbar { display: none; }
+  .commute-hub > * { flex-shrink: 0; }
+  .hub-arrow { display: none; }
+  .work-pill { height: 28px; font-size: 11.5px; padding: 0 8px; }
+  .mode-pills button { height: 28px; padding: 0 9px; font-size: 12px; }
+  .limit-pill { height: 28px; padding: 0 6px; }
+  .limit-pill input[type="range"] { width: 68px; }
+
+  /* 移动端弹窗全部视口居中贴边，彻底杜绝超出屏幕裁剪 */
+  .omni-pop, .req-pop, .help-pop {
+    position: fixed; top: calc(54px + env(safe-area-inset-top)); left: 8px; right: 8px; width: auto;
+    max-height: 70dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 65;
+  }
+  .map-filter-pop {
+    position: fixed; top: auto; left: 8px; right: 8px; width: auto;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    max-height: 60dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 65;
+  }
+
+  /* 轻浮 HUD 压缩省空间 */
+  .hud-top-left { top: 8px; left: 8px; max-width: calc(100vw - 16px); gap: 4px; }
+  .hud-chip { font-size: 10.5px; padding: 2px 7px; }
+  .hud-toast { font-size: 11.5px; padding: 5px 9px; }
+
+  /* 底部三区控制坞：单行横向丝滑滚动 + 保留精简滚动图例（含「底色」下拉切换！） */
+  .dock-bottom {
+    left: 0; right: 0; bottom: 0; transform: none; max-width: 100%; width: 100%;
+    padding: 0 8px calc(8px + env(safe-area-inset-bottom)); gap: 5px; align-items: stretch;
+  }
+  .sub-pill-row {
+    align-self: center; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .sub-pill-row::-webkit-scrollbar { display: none; }
+  .sub-pill-row button { flex-shrink: 0; padding: 4px 10px; }
+  .dock-bar {
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: 6px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    padding: 1px 0; width: 100%;
+  }
+  .dock-bar::-webkit-scrollbar { display: none; }
+  .dock-bar > * { flex-shrink: 0; }
+  .track-seg, .layer-dock { flex-wrap: nowrap; padding: 3px; }
+  .track-seg button, .layer-dock button { padding: 7px 11px; font-size: 12px; }
+  .map-filter-btn { padding: 8px 12px; font-size: 12px; }
+  .map-legend {
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; padding: 3px 9px; gap: 8px; font-size: 10.5px; border-radius: 10px;
+  }
+  .map-legend::-webkit-scrollbar { display: none; }
+  .legend-fill-sel { font-size: 11px; padding: 2px 6px; }
+
+  /* 右下缩放与推荐按钮抬高避让底部坞，抽屉拉起时自动退场不遮挡 */
+  .controls-bottom-right {
+    bottom: calc(96px + env(safe-area-inset-bottom)); right: 8px; gap: 6px;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .stage.drawer-open .controls-bottom-right { opacity: 0; pointer-events: none; transform: translateY(8px); }
+  .zoom-box button { width: 36px; height: 34px; font-size: 17px; }
+  .btn-discover { padding: 8px 12px; font-size: 12.5px; }
+
+  /* 移动端原生感上滑/下滑 Bottom Sheet 抽屉 */
+  .drawer {
+    left: 0; right: 0; top: auto; bottom: 0; width: auto;
+    height: auto; max-height: 58dvh; border-radius: 16px 16px 0 0; border-bottom: 0;
+    padding: 8px 14px calc(18px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    transition: max-height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.42);
+  }
+  .drawer.sheet-tall { max-height: 86dvh; }
+  .sheet-handle { display: flex; }
+  .drawer-close { width: 34px; height: 34px; font-size: 18px; }
+  .drawer-actions { gap: 7px; }
+  .drawer-actions button { padding: 7px 11px; }
+  .live-link-pill { padding: 5px 10px; font-size: 12px; }
+
+  .watchlist-overlay { padding: 14px 12px calc(24px + env(safe-area-inset-bottom)); }
 }</style>
 </head>
 <body>
@@ -689,7 +801,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
   </div>
 
   <div class="tb-right">
-    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ 看房清单 <span id="saved-count">0</span></button>
+    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ <span class="wl-lbl">看房清单 </span><span id="saved-count">0</span></button>
     <div class="pop-anchor">
       <button type="button" id="help-btn" class="icon-btn" title="数据说明" aria-expanded="false">?</button>
       <div id="help-pop" class="popover help-pop" hidden></div>
@@ -1017,7 +1129,7 @@ function atlasExtent(boxes) {
 
 function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null) {
   let cx, cy, zoom, frame=0, settleTimer=0, dragged=false, blockClick=false;
-  let initial=null;
+  let initial=null, lastTapTime=0, lastTapPt=null;
   const pointers=new Map();
   const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
   const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -1028,10 +1140,16 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     const k=unit*zoom, tx=w/2-cx*k, ty=h/2-cy*k;
     return {w,h,k,tx,ty,pt:p=>[p[0]*k+tx,p[1]*k+ty],worldAt:p=>[(p[0]-tx)/k,(p[1]-ty)/k]};
   }
-  function fit(box=world) {
+  function fit(box=world, opt={}) {
+    const padB=Math.max(0, Number(opt?.padBottom)||0);
     cx=(box[0]+box[2])/2;cy=(box[1]+box[3])/2;zoom=1;
     const {k,w,h}=viewport();
-    zoom=clamp(Math.min((w-28)/Math.max(18,box[2]-box[0]),(h-28)/Math.max(16,box[3]-box[1]))/k,1,42);
+    const availH=Math.max(120, h-28-padB);
+    zoom=clamp(Math.min((w-28)/Math.max(18,box[2]-box[0]),availH/Math.max(16,box[3]-box[1]))/k,1,42);
+    if(padB>0){
+      const k2=viewport().k;
+      cy=clamp(cy+(padB/2)/k2, world[1], world[3]);
+    }
   }
   function flushSettle() {
     if(settleTimer){clearTimeout(settleTimer);settleTimer=0;}
@@ -1090,7 +1208,8 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
   svg.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;
     const from=gesture();pointers.set(e.pointerId,local(e));const to=gesture();
-    if(!dragged && distance(to.mid,initial.mid)<5)return;
+    const thresh=e.pointerType==='touch'?9:5;
+    if(!dragged && pointers.size<2 && distance(to.mid,initial.mid)<thresh)return;
     const start=dragged?from:initial;
     dragged=true;svg.setPointerCapture?.(e.pointerId);
     svg.classList.add('panning');
@@ -1101,6 +1220,16 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     if(pointers.size){initial=gesture();return;}
     const wasDragged=dragged;
     blockClick=dragged;dragged=false;initial=null;svg.classList.remove('panning');
+    // Touch double-tap on bare map background zooms in smoothly around finger point
+    if(!wasDragged && e.type==='pointerup' && e.pointerType==='touch' && e.target===svg){
+      const now=Date.now(), ptNow=local(e);
+      if(lastTapPt && now-lastTapTime<320 && distance(ptNow,lastTapPt)<30){
+        lastTapTime=0; lastTapPt=null;
+        move(1.85,0,0,ptNow,false);
+        return;
+      }
+      lastTapTime=now; lastTapPt=ptNow;
+    }
     if(wasDragged&&settleTimer){flushSettle();redraw(false);}
   }
   for(const name of ['pointerup','pointercancel'])svg.addEventListener(name,end);
@@ -2919,7 +3048,9 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       const dest = evalResult.dest1;
       const rect = svg.getBoundingClientRect();
       const w = rect.width || 1100, h = rect.height || 660;
-      const cx = w / 2, cy = h / 2 - 14, maxR = Math.min(w, h) * 0.39;
+      const isCompact = w <= 820;
+      const cx = w / 2, cy = h / 2 - (isCompact ? 34 : 14);
+      const maxR = Math.min(w - (isCompact ? 28 : 48), h - (isCompact ? 156 : 100)) * 0.44;
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       const parts = [`<rect width="100%" height="100%" fill="#0f2328"/>`];
       const limit = state.limit;
@@ -3201,11 +3332,18 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
         }
       }
 
-      // 屏幕碰撞避让区
-      const occupied = [
-        [w - 154, h - 196, w, h],
-        [w / 2 - 230, h - 98, w / 2 + 230, h],
-      ];
+      // 屏幕碰撞避让区（自适应桌面端与移动端底部滚动坞/顶部状态条）
+      const isCompact = w <= 820;
+      const occupied = isCompact
+        ? [
+            [0, 0, Math.min(250, w), 36],
+            [0, h - 104, w, h],
+            [w - 134, h - 224, w, h - 94],
+          ]
+        : [
+            [w - 154, h - 196, w, h],
+            [w / 2 - 230, h - 98, w / 2 + 230, h],
+          ];
       const reserve = (x, y, bw, bh) => {
         if (x < 6 || y < 6 || x + bw > w - 6 || y + bh > h - 6) return false;
         if (occupied.some(b => x < b[2] + 4 && x + bw > b[0] - 4 && y < b[3] + 3 && y + bh > b[1] - 3)) return false;
@@ -3542,11 +3680,12 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       const sBox = $('#search-box');
       const sWrap = $('#search-wrap');
       const curWork = evalResult.dest1?.name || '';
+      const isMobile = () => (global.innerWidth || 1200) <= 820;
       if (evalResult.dest1) {
         hub.hidden = false;
         sBox.classList.remove('needs-dest');
         sWrap.classList.add('compact');
-        $('#omni-input').placeholder = '切换目的地或搜片区…';
+        $('#omni-input').placeholder = isMobile() ? '切换目的地/片区…' : '切换目的地或搜片区…';
         wp.innerHTML = `<span class="dot">★</span><span>去往 · ${esc(shortDestName(curWork))}</span><button type="button" data-clear-work title="清除目的地">×</button>`;
         if (curWork !== prevWorkName) {
           hub.classList.remove('just-unlocked');
@@ -3558,7 +3697,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
         hub.classList.remove('just-unlocked');
         sBox.classList.add('needs-dest');
         sWrap.classList.remove('compact');
-        $('#omni-input').placeholder = '① 先设目的地（园区 / 商圈 / 地铁 / 小区）…';
+        $('#omni-input').placeholder = isMobile() ? '① 先设通勤目的地…' : '① 先设目的地（园区 / 商圈 / 地铁 / 小区）…';
       }
       prevWorkName = curWork;
 
@@ -4085,7 +4224,9 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       }
 
       if (html) {
-        el.innerHTML = html;
+        const wasHidden = el.hidden;
+        el.innerHTML = `<div class="sheet-handle" data-sheet-handle role="button" tabindex="0" aria-label="拖动调整抽屉高度或下滑关闭"></div>` + html;
+        if (wasHidden) el.classList.remove('sheet-tall');
         el.hidden = false;
         stage.classList.add('drawer-open');
         const form = $('#place-note-form');
@@ -4100,6 +4241,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
         };
       } else {
         el.hidden = true;
+        el.classList.remove('sheet-tall');
         stage.classList.remove('drawer-open');
       }
     }
@@ -4193,12 +4335,18 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       });
     }
 
+    function fitForDrawer(bounds) {
+      const mobileSheet = (global.innerWidth || 1200) <= 820;
+      const padBottom = mobileSheet ? Math.round(($('#stage')?.clientHeight || 600) * 0.54) : 0;
+      map.camera.fit(bounds, { padBottom });
+    }
+
     function selectPlate(plateId, fitCamera = false) {
       const pl = engine.plateById.get(plateId);
       if (!pl) return;
       state.seen.add(plateId);
       fitExpanded = false; noteFormOpen = false;
-      if (fitCamera) map.camera.fit(pl.bounds);
+      if (fitCamera || (global.innerWidth || 1200) <= 820) fitForDrawer(pl.bounds);
       store.patch({
         watchlistOpen: false, macroOpen: false,
         selectedPlateId: plateId, selectedPlaceId: '', selectedLandmarkId: '',
@@ -4212,7 +4360,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       const pl = engine.plateById.get(p.plateId);
       if (pl) state.seen.add(pl.id);
       noteFormOpen = false;
-      if (fitCamera && pl) map.camera.fit(pl.bounds);
+      if (fitCamera && pl) fitForDrawer(pl.bounds);
       store.patch({
         watchlistOpen: false, macroOpen: false,
         selectedPlateId: p.plateId, selectedPlaceId: placeId, selectedLandmarkId: '',
@@ -4508,7 +4656,9 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     }
 
     svgEl.addEventListener('pointermove', ev => {
-      if (svgEl.classList.contains('panning') || ev.target.closest?.('.map-dest-cta')) { hCard.hidden = true; lastHoverKey = ''; return; }
+      if (ev.pointerType !== 'mouse' || svgEl.classList.contains('panning') || ev.target.closest?.('.map-dest-cta')) {
+        hCard.hidden = true; lastHoverKey = ''; return;
+      }
       const t = ev.target.closest?.('[data-aff],[data-plate],[data-landmark],[data-district],[data-risk],[data-fac]');
       const key = t ? (t.dataset.aff || t.dataset.plate || t.dataset.landmark || t.dataset.risk || t.dataset.fac || t.dataset.district || '') : '';
       if (!key) { hCard.hidden = true; lastHoverKey = ''; return; }
@@ -4521,6 +4671,42 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       positionHoverCard(ev);
     });
     svgEl.addEventListener('pointerleave', () => { hCard.hidden = true; lastHoverKey = ''; });
+
+    // 移动端 Bottom Sheet 抽屉手势：轻点手柄展开/半屏，上滑拉高至 86dvh，下滑收起或关闭
+    const drawerEl = $('#detail-drawer');
+    let sheetStartY = null, sheetMoved = false;
+    drawerEl.addEventListener('pointerdown', ev => {
+      const onHandle = !!ev.target.closest('[data-sheet-handle],[data-close-drawer],.drawer-head');
+      if (!onHandle || ev.target.closest('button,a')) return;
+      sheetStartY = ev.clientY;
+      sheetMoved = false;
+    });
+    drawerEl.addEventListener('pointermove', ev => {
+      if (sheetStartY == null) return;
+      if (Math.abs(ev.clientY - sheetStartY) > 12) sheetMoved = true;
+    });
+    drawerEl.addEventListener('pointerup', ev => {
+      if (sheetStartY == null) return;
+      const dy = ev.clientY - sheetStartY;
+      const onHandle = !!ev.target.closest('[data-sheet-handle]');
+      sheetStartY = null;
+      if (dy > 62) {
+        if (drawerEl.classList.contains('sheet-tall')) drawerEl.classList.remove('sheet-tall');
+        else clearSelection();
+      } else if (dy < -44) {
+        drawerEl.classList.add('sheet-tall');
+      } else if (!sheetMoved && onHandle) {
+        drawerEl.classList.toggle('sheet-tall');
+      }
+    });
+    drawerEl.addEventListener('pointercancel', () => { sheetStartY = null; sheetMoved = false; });
+
+    // 视口尺寸/横竖屏变化时自适应重绘（适配手机地址栏伸缩与横竖屏切换）
+    let resizeTimer = 0;
+    global.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (evalResult) refresh(); }, 120);
+    });
     // 地图右键任意板块/地标/设施：直接一键设为通勤目的地！
     svgEl.addEventListener('contextmenu', ev => {
       const t = ev.target.closest?.('[data-plate],[data-landmark],[data-fac]');

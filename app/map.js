@@ -526,7 +526,9 @@
       const dest = evalResult.dest1;
       const rect = svg.getBoundingClientRect();
       const w = rect.width || 1100, h = rect.height || 660;
-      const cx = w / 2, cy = h / 2 - 14, maxR = Math.min(w, h) * 0.39;
+      const isCompact = w <= 820;
+      const cx = w / 2, cy = h / 2 - (isCompact ? 34 : 14);
+      const maxR = Math.min(w - (isCompact ? 28 : 48), h - (isCompact ? 156 : 100)) * 0.44;
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       const parts = [`<rect width="100%" height="100%" fill="#0f2328"/>`];
       const limit = state.limit;
@@ -808,11 +810,18 @@
         }
       }
 
-      // 屏幕碰撞避让区
-      const occupied = [
-        [w - 154, h - 196, w, h],
-        [w / 2 - 230, h - 98, w / 2 + 230, h],
-      ];
+      // 屏幕碰撞避让区（自适应桌面端与移动端底部滚动坞/顶部状态条）
+      const isCompact = w <= 820;
+      const occupied = isCompact
+        ? [
+            [0, 0, Math.min(250, w), 36],
+            [0, h - 104, w, h],
+            [w - 134, h - 224, w, h - 94],
+          ]
+        : [
+            [w - 154, h - 196, w, h],
+            [w / 2 - 230, h - 98, w / 2 + 230, h],
+          ];
       const reserve = (x, y, bw, bh) => {
         if (x < 6 || y < 6 || x + bw > w - 6 || y + bh > h - 6) return false;
         if (occupied.some(b => x < b[2] + 4 && x + bw > b[0] - 4 && y < b[3] + 3 && y + bh > b[1] - 3)) return false;

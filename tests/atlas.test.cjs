@@ -313,6 +313,11 @@ test('V3 store losslessly preserves legacy shenzhen-rent-atlas.journal.v1 bookma
 test('Built index.html has lossless packed driving matrix, valid JS syntax, strict CSP, and zero missing DOM IDs', () => {
   const html = read('index.html');
   assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /viewport-fit=cover/, 'Mobile HTML should support notched screen safe areas');
+  assert.match(html, /height:\s*100dvh/, 'Mobile layout should use dynamic viewport height (100dvh)');
+  assert.match(html, /env\(safe-area-inset-bottom\)/, 'Mobile bottom dock & sheet should respect iOS safe-area-inset-bottom');
+  assert.match(html, /@media \(hover: none\)/, 'Touch devices should suppress ghost desktop hover card');
+  assert.match(html, /sheet-handle/, 'Mobile bottom sheet should include drag handle');
   assert.match(html, /id="atlas-v3-data"/);
   assert.match(html, /id="commute-hub"/);
   assert.match(html, /id="req-pop"/);

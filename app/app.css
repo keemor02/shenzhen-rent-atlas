@@ -34,17 +34,23 @@
     --shadow: 0 12px 36px rgba(0, 0, 0, 0.48);
   }
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; overflow: hidden; background: #0f2328; color: var(--fg); font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+html { height: 100%; overflow: hidden; background: #0f2328; }
+body {
+  display: flex; flex-direction: column; height: 100%; height: 100dvh; margin: 0; overflow: hidden;
+  background: #0f2328; color: var(--fg);
+  font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  overscroll-behavior: none;
+}
 button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; }
 a { color: var(--accent); text-underline-offset: 2px; }
 
-/* 唯一纤细顶栏 */
+/* 唯一纤细顶栏（自动适应桌面单行 & 移动端安全区双行，无需硬编码 calc 高度） */
 .topbar {
-  height: 52px; padding: 0 12px; display: flex; align-items: center; gap: 10px;
-  background: var(--bg); border-bottom: 1px solid var(--line); position: relative; z-index: 40;
+  min-height: 52px; padding: env(safe-area-inset-top) 12px 0; display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line); position: relative; z-index: 40; flex-shrink: 0;
 }
 .tb-left, .tb-filters, .tb-right { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .tb-left { flex: 1 1 auto; }
@@ -212,7 +218,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .help-pop p:last-child { margin: 0; }
 
 /* 全屏拼图舞台 */
-.stage { position: relative; width: 100%; height: calc(100vh - 52px); overflow: hidden; background: #0f2328; }
+.stage { position: relative; width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #0f2328; }
 #atlas-svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: grab; outline: none; }
 #atlas-svg.panning { cursor: grabbing; }
 #atlas-svg :focus { outline: none; }
@@ -288,9 +294,9 @@ a { color: var(--accent); text-underline-offset: 2px; }
   color: #e9fbf3; font-size: 12px; width: fit-content; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
-/* 底部悬浮镜头坞 */
+/* 底部悬浮镜头坞（z-index 26 确保标点与事件浮层盖过右下缩放钮，同时低于抽屉 30） */
 .dock-bottom {
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 25;
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 26;
   display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: calc(100vw - 24px);
 }
 .sub-pill-row {
@@ -589,18 +595,121 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .wl-table thead th { background: var(--surface); }
 .wl-table tbody th { width: 92px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 
-@media (max-width: 1120px) {
-  .topbar { height: auto; flex-wrap: wrap; padding: 6px 10px; gap: 6px; }
-  .stage { height: calc(100vh - 94px); }
+/* 移动端底部拉起面板拖动手柄（桌面隐藏，小屏展示） */
+.sheet-handle {
+  display: none; width: 100%; padding: 6px 0 8px; margin: -6px 0 4px;
+  justify-content: center; align-items: center; cursor: grab; touch-action: none;
 }
+.sheet-handle::before {
+  content: ''; width: 38px; height: 4px; border-radius: 99px; background: var(--line); display: block;
+}
+
+@media (hover: none) {
+  .hover-card { display: none !important; }
+}
+
+@media (max-width: 1120px) {
+  .topbar { flex-wrap: wrap; padding: calc(6px + env(safe-area-inset-top)) 10px 6px; gap: 6px; }
+}
+
 @media (max-width: 820px) {
-  .topbar { height: auto; flex-wrap: wrap; padding: 6px 8px; gap: 6px; }
-  .stage { height: calc(100vh - 110px); }
+  /* 防止 iOS 聚焦输入框时自动缩放页面 */
+  input, select, textarea { font-size: 16px; }
+
+  .topbar {
+    flex-wrap: wrap; padding: calc(6px + env(safe-area-inset-top)) 8px 6px; gap: 6px; min-height: 46px;
+  }
   .brand-mark { display: none; }
-  .search-wrap, .search-wrap.compact { width: 100%; flex: 1 1 180px; }
-  .commute-hub { flex-wrap: wrap; border-radius: 10px; }
-  .drawer { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 62vh; }
-  .stage.drawer-open .controls-bottom-right { right: 14px; }
-  .dock-bottom { bottom: 10px; }
-  .map-legend { display: none; }
+  .tb-left { flex: 1 1 auto; gap: 6px; flex-wrap: wrap; }
+  .tb-filters, .tb-right { gap: 5px; flex-shrink: 0; }
+  .wl-lbl { display: none; }
+  .search-wrap, .search-wrap.compact { flex: 1 1 120px; width: auto; min-width: 110px; order: 1; }
+  .search-box { height: 36px; padding: 0 9px; }
+  .search-box input { font-size: 14px; }
+  .pill-btn { height: 34px; padding: 0 9px; font-size: 12px; }
+  .icon-btn { width: 34px; height: 34px; }
+
+  /* 移动端联动通勤条：单行丝滑横向滚动，永不撑爆成 3–4 行 */
+  .commute-hub {
+    order: 10; flex: 1 0 100%; max-width: 100%; width: 100%;
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-radius: 10px; padding: 3px 6px; gap: 5px;
+  }
+  .commute-hub::-webkit-scrollbar { display: none; }
+  .commute-hub > * { flex-shrink: 0; }
+  .hub-arrow { display: none; }
+  .work-pill { height: 28px; font-size: 11.5px; padding: 0 8px; }
+  .mode-pills button { height: 28px; padding: 0 9px; font-size: 12px; }
+  .limit-pill { height: 28px; padding: 0 6px; }
+  .limit-pill input[type="range"] { width: 68px; }
+
+  /* 移动端弹窗全部视口居中贴边，彻底杜绝超出屏幕裁剪 */
+  .omni-pop, .req-pop, .help-pop {
+    position: fixed; top: calc(54px + env(safe-area-inset-top)); left: 8px; right: 8px; width: auto;
+    max-height: 70dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 65;
+  }
+  .map-filter-pop {
+    position: fixed; top: auto; left: 8px; right: 8px; width: auto;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    max-height: 60dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 65;
+  }
+
+  /* 轻浮 HUD 压缩省空间 */
+  .hud-top-left { top: 8px; left: 8px; max-width: calc(100vw - 16px); gap: 4px; }
+  .hud-chip { font-size: 10.5px; padding: 2px 7px; }
+  .hud-toast { font-size: 11.5px; padding: 5px 9px; }
+
+  /* 底部三区控制坞：单行横向丝滑滚动 + 保留精简滚动图例（含「底色」下拉切换！） */
+  .dock-bottom {
+    left: 0; right: 0; bottom: 0; transform: none; max-width: 100%; width: 100%;
+    padding: 0 8px calc(8px + env(safe-area-inset-bottom)); gap: 5px; align-items: stretch;
+  }
+  .sub-pill-row {
+    align-self: center; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .sub-pill-row::-webkit-scrollbar { display: none; }
+  .sub-pill-row button { flex-shrink: 0; padding: 4px 10px; }
+  .dock-bar {
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: 6px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    padding: 1px 0; width: 100%;
+  }
+  .dock-bar::-webkit-scrollbar { display: none; }
+  .dock-bar > * { flex-shrink: 0; }
+  .track-seg, .layer-dock { flex-wrap: nowrap; padding: 3px; }
+  .track-seg button, .layer-dock button { padding: 7px 11px; font-size: 12px; }
+  .map-filter-btn { padding: 8px 12px; font-size: 12px; }
+  .map-legend {
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; padding: 3px 9px; gap: 8px; font-size: 10.5px; border-radius: 10px;
+  }
+  .map-legend::-webkit-scrollbar { display: none; }
+  .legend-fill-sel { font-size: 11px; padding: 2px 6px; }
+
+  /* 右下缩放与推荐按钮抬高避让底部坞，抽屉拉起时自动退场不遮挡 */
+  .controls-bottom-right {
+    bottom: calc(96px + env(safe-area-inset-bottom)); right: 8px; gap: 6px;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .stage.drawer-open .controls-bottom-right { opacity: 0; pointer-events: none; transform: translateY(8px); }
+  .zoom-box button { width: 36px; height: 34px; font-size: 17px; }
+  .btn-discover { padding: 8px 12px; font-size: 12.5px; }
+
+  /* 移动端原生感上滑/下滑 Bottom Sheet 抽屉 */
+  .drawer {
+    left: 0; right: 0; top: auto; bottom: 0; width: auto;
+    height: auto; max-height: 58dvh; border-radius: 16px 16px 0 0; border-bottom: 0;
+    padding: 8px 14px calc(18px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    transition: max-height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.42);
+  }
+  .drawer.sheet-tall { max-height: 86dvh; }
+  .sheet-handle { display: flex; }
+  .drawer-close { width: 34px; height: 34px; font-size: 18px; }
+  .drawer-actions { gap: 7px; }
+  .drawer-actions button { padding: 7px 11px; }
+  .live-link-pill { padding: 5px 10px; font-size: 12px; }
+
+  .watchlist-overlay { padding: 14px 12px calc(24px + env(safe-area-inset-bottom)); }
 }

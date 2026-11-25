@@ -40,7 +40,7 @@ function buildManifest() {
   return JSON.stringify({
     name: '深圳租房板块探索地图',
     short_name: '深圳租房地图',
-    description: '全深圳 98 块居住板块拼图、通勤时间圈、分形态租金与官方保租房探索地图',
+    description: '全深圳 117 块居住片区拼图、平峰/早高峰通勤时间圈、多信源租金与官方保租房探索地图',
     start_url: './',
     scope: './',
     display: 'standalone',
