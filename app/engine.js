@@ -18,11 +18,11 @@
   ]);
 
   const GRAIN_LABELS = {
-    project: '实采',
+    project: '市场挂牌',
     official_affordable: '官方保租',
-    band: '参考带',
-    market: '商圈均值',
-    personal: '我的实录',
+    band: '市场区间',
+    market: '片区均价',
+    personal: '我的记录',
   };
 
   const FIT_NAMES = { commute: '通勤', rent: '租金', environment: '环境', convenience: '便利' };
@@ -83,6 +83,8 @@
     const policyById = new Map(atlas.policies.map(p => [p.id, p]));
     const facById = new Map(atlas.facilities.map(f => [f.id, f]));
     const riskById = new Map(atlas.publicEvents.map(e => [e.id, e]));
+    const affById = new Map((atlas.affordableProjects || []).map(a => [a.id, a]));
+    const districtDensityByName = new Map((atlas.districts || []).map(d => [d.n, d.density]));
     const destByName = new Map(atlas.destinations.map(d => [d.name, d]));
     const locatedFacilities = (atlas.facilities || []).filter(f => validCoord(f.location?.gcj02) && osmURL(f));
 
@@ -97,11 +99,13 @@
       return res;
     }
 
-    // 任意目的地解析：支持 529 处知名地标、商圈、351 地铁站、30 公交站、98 板块、小区/村与核验设施！
+    // 任意目的地解析：支持 600+ 处知名写字楼、产业园、商圈、地铁站、公交枢纽、片区与小区，支持大小写无关与简称别名检索！
     function resolveDestination(raw) {
       const q = String(raw ?? '').trim();
       if (!q) return null;
+      const ql = q.toLowerCase();
       const strip = q.replace(/(?:地铁站|公交站|站)$/u, '');
+      const stripL = strip.toLowerCase();
       const tryExact = k => {
         if (destByName.has(k)) return destByName.get(k);
         if (Object.hasOwn(ALIASES, k) && destByName.has(ALIASES[k])) return destByName.get(ALIASES[k]);
@@ -113,42 +117,59 @@
       };
       const exact = tryExact(q) || tryExact(strip);
       if (exact) return exact;
+      // Match exact alias (case-insensitive)
+      for (const d of atlas.destinations) {
+        if (d.name.toLowerCase() === ql || (d.aliases || []).some(a => a.toLowerCase() === ql || a.toLowerCase() === stripL)) {
+          return d;
+        }
+      }
       if (strip.length < 2) return null;
       const hits = [];
       for (const d of atlas.destinations) {
-        if (d.name.includes(strip)) hits.push(d);
+        if (d.name.toLowerCase().includes(stripL) || (d.aliases || []).some(a => a.toLowerCase().includes(stripL))) hits.push(d);
         if (hits.length > 3) break;
       }
       return hits.length === 1 ? hits[0] : null;
     }
 
-    function searchDestinations(raw, limit = 8) {
+    function searchDestinations(raw, limit = 10) {
       const q = String(raw ?? '').trim();
       if (!q) return [];
-      const aliasTarget = Object.entries(ALIASES).filter(([k]) => k.includes(q)).map(([, v]) => destByName.get(v)).filter(Boolean);
-      const exact = [], starts = [], contains = [];
+      const ql = q.toLowerCase();
+      const aliasTarget = Object.entries(ALIASES).filter(([k]) => k.toLowerCase().includes(ql)).map(([, v]) => destByName.get(v)).filter(Boolean);
+      const exact = [], starts = [], contains = [], noteHits = [];
       const seen = new Set();
       const pushUnique = (arr, item) => { if (!seen.has(item.name)) { seen.add(item.name); arr.push(item); } };
       aliasTarget.forEach(d => pushUnique(exact, d));
       for (const d of atlas.destinations) {
-        if (d.name === q) pushUnique(exact, d);
-        else if (d.name.startsWith(q)) pushUnique(starts, d);
-        else if (d.name.includes(q)) pushUnique(contains, d);
+        const nl = d.name.toLowerCase();
+        const als = (d.aliases || []).map(a => a.toLowerCase());
+        if (nl === ql || als.includes(ql)) pushUnique(exact, d);
+        else if (nl.startsWith(ql) || als.some(a => a.startsWith(ql))) pushUnique(starts, d);
+        else if (nl.includes(ql) || als.some(a => a.includes(ql))) pushUnique(contains, d);
+        else if (d.note && d.note.toLowerCase().includes(ql)) pushUnique(noteHits, d);
       }
-      return [...exact, ...starts, ...contains].slice(0, limit);
+      return [...exact, ...starts, ...contains, ...noteHits].slice(0, limit);
     }
 
-    // 任意起点 -> 任意目的地（地标/商圈/小区/公交/地铁）的真实门到门通勤估时
+    // 深圳早高峰（07:45–09:15）真实客流控制大站 & 潮汐拥堵估算参数（诚实标注估算，非实时 API）
+    const PEAK_HEAVY_ORIGIN = new Set(['固戍', '坪洲', '西乡', '五和', '民治', '白石龙', '清湖', '龙华', '布吉', '大芬', '木棉湾', '沙井']);
+    const PEAK_MOD_ORIGIN = new Set(['翻身', '灵芝', '宝安中心', '坂田', '上梅林', '长岭陂', '上塘', '红山', '龙胜', '下水径', '杨美', '福永', '后瑞', '松岗', '桃园', '南山', '茶光', '西丽']);
+    const PEAK_BUSY_DEST = new Set(['高新园', '深大', '科苑', '后海', '粤海门', '留仙洞', '车公庙', '购物公园', '会展中心', '福田', '岗厦', '岗厦北', '前海湾', '桂湾', '华为', '雅宝']);
+    const isCoreJobBelt = ll => ll && ll[0] >= 113.86 && ll[0] <= 114.14 && ll[1] >= 22.48 && ll[1] <= 22.63;
+
+    // 任意起点 -> 任意目的地（地标/商圈/小区/公交/地铁）的真实门到门通勤估时（支持平峰 / 早高峰切换）
     function routeToDest(originId, originCoord, originStation, destObj, opt) {
       if (!destObj || !validCoord(originCoord) || !validCoord(destObj.coord)) return null;
       const { node: from, station: fromRail } = getOriginNodes(originId, originCoord, originStation);
       const toNode = nodes.get(destObj.name) || nearestNode(destObj.coord);
       const distDirect = meter(originCoord, destObj.coord);
       const walkDirect = walk(distDirect);
+      const isPeak = opt.peak === true;
 
-      // 距离在 1.1km 内直接步行最快
+      // 距离在 1.1km 内直接步行最快（不受高峰堵车影响）
       if (distDirect <= 1100) {
-        return { minutes: Math.max(3, walkDirect), walk: Math.max(3, walkDirect), legs: [], label: '直接步行', same: true };
+        return { minutes: Math.max(3, walkDirect), walk: Math.max(3, walkDirect), legs: [], label: '直接步行', same: true, peak: isPeak, peakExtra: 0, peakDetail: '' };
       }
 
       const a = Math.max(opt.access, walk(meter(originCoord, from.coord)));
@@ -157,7 +178,7 @@
       if (opt.mode === 'rail') {
         const fromIsland = from.name === '企鹅岛';
         const toIsland = destObj.name === '企鹅岛';
-        if (fromIsland && toIsland) return { minutes: a + eNode, walk: a + eNode, legs: [], label: '园区内步行', same: true };
+        if (fromIsland && toIsland) return { minutes: a + eNode, walk: a + eNode, legs: [], label: '园区内步行', same: true, peak: isPeak, peakExtra: 0, peakDetail: '' };
         const destRail = toIsland ? toNode : (railNames.has(destObj.name) ? nodes.get(destObj.name) : nearestRail(destObj.coord));
         const fromWalk = fromIsland ? a : Math.max(opt.access, walk(meter(originCoord, fromRail.coord)));
         const destWalk = toIsland ? opt.egress : Math.max(opt.egress, walk(meter(destObj.coord, destRail.coord)));
@@ -171,8 +192,23 @@
         }
         if (!r) return null;
         const w = fromWalk + destWalk;
+        let peakExtra = 0, peakDetail = '';
+        if (isPeak && !r.sameStation) {
+          const origName = fromIsland ? from.name : fromRail.name;
+          const entryQ = PEAK_HEAVY_ORIGIN.has(origName) ? 7 : PEAK_MOD_ORIGIN.has(origName) ? 4 : 2;
+          const xferQ = Math.max(0, (r.legs?.length || 1) - 1) * 2;
+          const exitQ = PEAK_BUSY_DEST.has(destRail.name) ? 3 : 1;
+          peakExtra = entryQ + xferQ + exitQ;
+          const reasons = [];
+          if (entryQ >= 7) reasons.push(`${origName}站早高峰限流排队`);
+          else if (entryQ >= 4) reasons.push(`${origName}站进站较挤`);
+          if (xferQ > 0) reasons.push('换乘拥挤');
+          if (exitQ >= 3) reasons.push(`${destRail.name}站出站高峰`);
+          peakDetail = `早高峰估算 +${peakExtra}分（${reasons.join('·') || '早高峰进出站缓冲'}）`;
+        }
         return {
-          ...r, walk: w, minutes: r.minutes + w,
+          ...r, walk: w, minutes: r.minutes + w + peakExtra,
+          peak: isPeak, peakExtra, peakDetail,
           origin: fromIsland ? from.name : fromRail.name,
           terminal: destRail.name,
           label: r.sameStation ? '同站步行' : r.legs.map(l => Object.hasOwn(timing.lines, l.line) ? l.line + '号线' : l.line).join('→'),
@@ -183,11 +219,25 @@
         const sec = travel.driving?.durations?.[from.i]?.[toNode.i];
         const dist = travel.driving?.distances?.[from.i]?.[toNode.i];
         if (sec == null || dist == null) return null;
-        return { minutes: Math.ceil(sec / 60) + a + eNode, seconds: sec, meters: dist, walk: a + eNode, legs: [], label: `驾车 ${(dist / 1000).toFixed(1)}km` };
+        const baseDrive = Math.ceil(sec / 60);
+        let peakExtra = 0, peakDetail = '';
+        if (isPeak) {
+          const inbound = isCoreJobBelt(destObj.coord);
+          const mult = inbound ? (dist >= 5000 ? 1.55 : 1.35) : 1.25;
+          const parkQueue = inbound && dist >= 5000 ? 6 : 4;
+          const peakDrive = Math.ceil((sec / 60) * mult) + parkQueue;
+          peakExtra = Math.max(4, peakDrive - baseDrive);
+          peakDetail = `早高峰估算 +${peakExtra}分（${inbound ? '进核心办公区潮汐拥堵' : '早高峰常规路况'}，点高德可核实测）`;
+        }
+        return {
+          minutes: baseDrive + a + eNode + peakExtra, seconds: sec, meters: dist, walk: a + eNode,
+          legs: [], peak: isPeak, peakExtra, peakDetail,
+          label: `${isPeak ? '早高峰驾车' : '驾车'} ${(dist / 1000).toFixed(1)}km`,
+        };
       }
 
       // Bus
-      if (from.i === toNode.i) return { minutes: a + eNode, walk: a + eNode, legs: [], label: '同点步行', same: true };
+      if (from.i === toNode.i) return { minutes: a + eNode, walk: a + eNode, legs: [], label: '同点步行', same: true, peak: isPeak, peakExtra: 0, peakDetail: '' };
       const key = `${from.name}|${toNode.name}`;
       if (!busCache.has(key)) {
         const possible = global.busOptions(travel, from.i, toNode.i);
@@ -199,7 +249,9 @@
         if (r.shuttle && !shuttle) return [];
         const wait = shuttle ? shuttle.wait : 5 * r.legs.length;
         const ride = shuttle ? shuttle.ride : Math.ceil(r.estimatedRide);
-        return [{ ...r, ride, wait, walk: w, minutes: ride + wait + w, label: r.legs.map(l => l.line).join('→') }];
+        const peakExtra = isPeak ? Math.ceil(ride * 0.35) + 3 : 0;
+        const peakDetail = isPeak ? `早高峰估算 +${peakExtra}分（路面拥堵与候车缓冲）` : '';
+        return [{ ...r, ride, wait, walk: w, minutes: ride + wait + w + peakExtra, peak: isPeak, peakExtra, peakDetail, label: r.legs.map(l => l.line).join('→') }];
       }).sort((x, y) => x.minutes - y.minutes)[0];
       return best || null;
     }
@@ -214,39 +266,63 @@
         .slice(0, 5);
     }
 
-    function filterRents(rawRents, housingTypesFallback, state, personalEntry) {
-      const allowedTypes = new Set(state.housingTypes || []);
-      const targetRoom = state.room ? Number(state.room) : 0;
+    function filterRents(rawRents, housingTypesFallback, state, personalEntry, mergeByBucket = false) {
       const list = [];
 
-      if (personalEntry?.monthly > 0 && (!targetRoom || !personalEntry.rooms || personalEntry.rooms === targetRoom)) {
+      if (personalEntry?.monthly > 0) {
         list.push({
           type: housingTypesFallback?.[0] || 'modernEstate',
-          room: personalEntry.rooms || targetRoom || 1,
+          room: personalEntry.rooms || 1,
           low: personalEntry.monthly, median: personalEntry.monthly, high: personalEntry.monthly,
           sqm: personalEntry.sqm ? [personalEntry.sqm, personalEntry.sqm] : null,
-          grain: 'personal', period: personalEntry.observed || '实地实录',
-          basis: '我实地看房记录的报价', source: '', sourceName: '个人记录',
+          grain: 'personal', period: personalEntry.observed || '我的记录',
+          basis: '我实地看房记录的报价', source: '', sourceName: '我的看房笔记',
         });
       }
 
       for (const r of rawRents || []) {
-        if (state.verifiedOnly && !['project', 'official_affordable', 'personal'].includes(r.grain)) continue;
-        if (targetRoom && r.room !== targetRoom) continue;
-        if (r.type !== 'mixed' && allowedTypes.size && !allowedTypes.has(r.type)) continue;
-        if (r.type === 'mixed' && allowedTypes.size < 4 && (rawRents || []).some(x => x.type !== 'mixed')) continue;
-        if (state.sqm > 0 && (!r.sqm || r.sqm[1] < state.sqm)) continue;
         list.push(r);
       }
 
-      // Deduplicate identical band entries when aggregated at plate level
-      const dedup = new Map();
-      const tier = { personal: 0, project: 1, official_affordable: 1, band: 2, market: 3 };
-      for (const r of list) {
-        const k = `${r.grain}|${r.type}|${r.room}|${r.low}|${r.high}|${r.basis}`;
-        if (!dedup.has(k)) dedup.set(k, r);
+      const tier = { personal: 0, official_affordable: 1, project: 2, band: 3, market: 4 };
+      let result;
+      if (mergeByBucket) {
+        // 片区级汇总：同类同居室自动合并为一个清晰区间，并剔除明显单床位低价噪点（如 ¥900 混入 ¥3200–8500）
+        const buckets = new Map();
+        for (const r of list) {
+          if (r.grain === 'market' && r.median < 1100 && list.some(x => x.grain === 'market' && x.room === r.room && x.median >= 2000)) continue;
+          const k = `${r.type}|${r.room}|${r.grain}`;
+          const prev = buckets.get(k);
+          if (!prev) {
+            buckets.set(k, { ...r, count: 1, _meds: [r.median] });
+          } else {
+            prev.low = Math.min(prev.low, r.low);
+            prev.high = Math.max(prev.high, r.high);
+            prev._meds.push(r.median);
+            prev.count++;
+            if (r.sqm && prev.sqm) prev.sqm = [Math.min(prev.sqm[0], r.sqm[0]), Math.max(prev.sqm[1], r.sqm[1])];
+          }
+        }
+        result = [...buckets.values()].map(b => {
+          b._meds.sort((a, c) => a - c);
+          b.median = b._meds[Math.floor(b._meds.length / 2)];
+          delete b._meds;
+          return b;
+        });
+        // 若片区已有更精准的分房型挂牌/行情，隐藏泛泛的 mixed 兜底行避免混杂
+        if (result.some(r => r.type !== 'mixed')) {
+          result = result.filter(r => r.type !== 'mixed');
+        }
+      } else {
+        const dedup = new Map();
+        for (const r of list) {
+          const k = `${r.grain}|${r.type}|${r.room}|${r.low}|${r.high}|${r.basis}`;
+          if (!dedup.has(k)) dedup.set(k, r);
+        }
+        result = [...dedup.values()];
       }
-      const sorted = [...dedup.values()].sort((a, b) => (tier[a.grain] ?? 9) - (tier[b.grain] ?? 9) || a.median - b.median);
+
+      const sorted = result.sort((a, b) => (tier[a.grain] ?? 9) - (tier[b.grain] ?? 9) || a.room - b.room || a.median - b.median);
       const best = sorted[0] || null;
       const withinBudget = !state.budget || (best ? best.low <= state.budget : true);
       return { best, all: sorted, withinBudget };
@@ -273,7 +349,13 @@
       for (const row of plateRows) {
         row.premium = { status: 'no-work', reason: '先设目的地', hub: null, own: null, median: null, extra: null, count: 0, alternatives: [] };
         if (!dest1) continue;
-        const sampleCoords = [row.plate.coord, ...row.childRows.map(c => c.place.coord)].filter(validCoord);
+        // 仅采样本板块锚点及 1.8km 内的真实居住子点，避免隔海的企鹅岛误计入坪洲步行 0 分！
+        const sampleCoords = [
+          row.plate.coord,
+          ...row.childRows
+            .filter(c => c.place.id !== 'e-island' && validCoord(c.place.coord) && meter(row.plate.coord, c.place.coord) <= 1800)
+            .map(c => c.place.coord),
+        ].filter(validCoord);
         const nearby = hubNodes.map(h => {
           const minWalk = Math.min(...sampleCoords.map(c => walk(meter(c, h.coord))));
           const insidePlate = hubHomePlate.get(h.name) === row.plate.id;
@@ -290,6 +372,47 @@
         a.route && b.route && a.route.minutes <= b.route.minutes &&
         (!dest2 || (a.route2 && b.route2 && a.route2.minutes <= b.route2.minutes));
 
+      const stdSqm = state.sqm > 0 ? state.sqm : (state.room === '2' ? 60 : state.room === '3' ? 85 : 35);
+
+      // 辅助：检查「同通勤时长（±10分）全城高溢价」（与「↘可捡漏」的 -12% 逻辑对称，覆盖豪宅/学区/景观/核心商圈贵出 ≥20% 的片区）
+      const checkCitywidePeerPremium = row => {
+        const res = row.premium;
+        const myUnit = row.plate.unitPrice;
+        if (!myUnit || !row.route || (dest2 && !row.route2)) return false;
+        const peers = plateRows.filter(other =>
+          other !== row && other.plate.unitPrice > 0 && other.route &&
+          Math.abs(other.route.minutes - row.route.minutes) <= 10 &&
+          (!dest2 || (other.route2 && Math.abs(other.route2.minutes - row.route2.minutes) <= 10))
+        );
+        if (peers.length < 4) return false;
+        const vals = peers.map(p => p.plate.unitPrice).sort((a, b) => a - b);
+        const mid = Math.floor(vals.length / 2);
+        const medUnit = Math.round(vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2);
+        const extraUnit = myUnit - medUnit;
+        const pct = Math.round((extraUnit / medUnit) * 100);
+        if (pct < 20 || extraUnit < 12) return false;
+        const cheaperPeers = peers
+          .filter(o => o.plate.unitPrice < myUnit && noSlower(o, row) && o.eligible)
+          .sort((a, b) => a.plate.unitPrice - b.plate.unitPrice || a.route.minutes - b.route.minutes)
+          .slice(0, 2);
+        if (!cheaperPeers.length) return false;
+        res.status = 'premium';
+        res.kind = 'peer';
+        res.pct = pct;
+        res.count = peers.length;
+        res.medianUnit = medUnit;
+        res.median = medUnit * stdSqm;
+        res.extraUnit = extraUnit;
+        res.extra = Math.round(extraUnit * stdSqm);
+        res.stdSqm = stdSqm;
+        res.alternatives = cheaperPeers.map(o => ({
+          id: o.plate.id, name: o.plate.name, unitPrice: o.plate.unitPrice,
+          minutes: o.route.minutes, future: o.route2?.minutes ?? null,
+        }));
+        res.reason = `同通勤时长（±10分）其他片区均价中位 ${medUnit}元/㎡，本片区高出 ${extraUnit}元/㎡（+${pct}%），按 ${stdSqm}㎡ 折合每月多付约 ¥${money(res.extra)}（多为豪宅/学区/核心商圈溢价）`;
+        return true;
+      };
+
       for (const row of plateRows) {
         const res = row.premium;
         const prox = walkingSites.get(row) || [];
@@ -300,19 +423,21 @@
 
         if (res.own && res.own.walk <= WALK_LIMIT) {
           res.status = 'direct';
-          res.reason = res.own.secondary ? '第二目的地在 15 分钟步行圈内' : '目的地在 15 分钟步行圈内';
+          res.reason = res.own.secondary ? '备选工作地在 15 分钟步行圈内' : '目的地在 15 分钟步行圈内';
           continue;
         }
         const usedHub = prox.find(h => usedSet.has(h.name));
         res.hub = usedHub || prox[0] || null;
         if (usedHub) {
           res.status = 'used';
-          res.reason = `你标记了常去「${usedHub.name}」，不计入溢价`;
+          res.reason = `你标记了常去「${usedHub.name}」，不计入高溢价`;
           continue;
         }
         if (!res.hub) {
-          res.status = 'no-hub';
-          res.reason = '在 10 大园区 15 分钟步行圈外';
+          if (!checkCitywidePeerPremium(row)) {
+            res.status = 'no-hub';
+            res.reason = '在 10 大园区 15 分钟步行圈外，且未明显高于同通勤时长中位';
+          }
           continue;
         }
 
@@ -322,7 +447,7 @@
           continue;
         }
 
-        // 同程圈外板块单价（元/㎡·月）对比：全城 98 板块统一口径，统计更公平！
+        // 同程圈外板块单价（元/㎡·月）对比：全城 98 片区统一口径，统计更公平！
         const myUnit = row.plate.unitPrice;
         const peers = plateRows.filter(other =>
           other !== row && other.plate.unitPrice > 0 && simCommute(other, row) &&
@@ -330,23 +455,25 @@
         );
         res.count = peers.length;
         if (!myUnit || peers.length < MIN_PEERS) {
-          res.reason = `同程圈外对照不足 3 处（当前 ${peers.length} 处）`;
+          if (!checkCitywidePeerPremium(row)) {
+            res.reason = `同程圈外对照不足 3 处（当前 ${peers.length} 处）`;
+          }
           continue;
         }
         const vals = peers.map(p => p.plate.unitPrice).sort((a, b) => a - b);
         const mid = Math.floor(vals.length / 2);
         const medUnit = Math.round(vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2);
         const extraUnit = myUnit - medUnit;
-        // 换算成 35㎡ 标准一居月差额，直观易懂！
-        const stdSqm = state.sqm > 0 ? state.sqm : (state.room === '2' ? 60 : state.room === '3' ? 85 : 35);
         res.median = medUnit * stdSqm;
         res.medianUnit = medUnit;
 
         if (extraUnit <= 4) {
-          res.status = 'no-extra';
-          res.extra = 0;
-          res.extraUnit = 0;
-          res.reason = `本板块参考单价（${myUnit}元/㎡）未明显高于同程圈外中位（${medUnit}元/㎡）`;
+          if (!checkCitywidePeerPremium(row)) {
+            res.status = 'no-extra';
+            res.extra = 0;
+            res.extraUnit = 0;
+            res.reason = `本片区参考单价（${myUnit}元/㎡）未明显高于同程圈外中位（${medUnit}元/㎡）`;
+          }
           continue;
         }
 
@@ -361,16 +488,19 @@
         }));
 
         if (!cheaperPeers.length) {
-          res.status = 'tradeoff';
-          res.reason = `单价高于同程中位（${medUnit}元/㎡），但暂缺更便宜且通勤不增的替代板块`;
+          if (!checkCitywidePeerPremium(row)) {
+            res.status = 'tradeoff';
+            res.reason = `单价高于同通勤时长片区中位（${medUnit}元/㎡），但附近暂缺更便宜且不增时的替代片区`;
+          }
           continue;
         }
 
         res.status = 'premium';
+        res.kind = 'hub';
         res.extraUnit = extraUnit;
         res.extra = Math.round(extraUnit * stdSqm);
         res.stdSqm = stdSqm;
-        res.reason = `邻近「${res.hub.name}」但你不到此上班，单价比同程圈外中位（${medUnit}元/㎡）贵 ${extraUnit} 元/㎡（按 ${stdSqm}㎡ 折合约 ¥${money(res.extra)}/月）`;
+        res.reason = `邻近「${res.hub.name}」但你不到此上班，同通勤时长下比其他片区中位（${medUnit}元/㎡）贵 ${extraUnit} 元/㎡（按 ${stdSqm}㎡ 折合约 ¥${money(res.extra)}/月）`;
       }
     }
 
@@ -382,36 +512,36 @@
 
       if (row.route) {
         let ratio = row.route.minutes / state.limit;
-        let why = `单程 ${row.route.minutes} / 上限 ${state.limit} 分`;
+        let why = `通勤 ${row.route.minutes} / 上限 ${state.limit} 分`;
         if (state.work2 && state.limit2 > 0 && row.route2) {
           ratio = Math.max(ratio, row.route2.minutes / state.limit2);
-          why += `，二程 ${row.route2.minutes} / ${state.limit2} 分`;
+          why += `，备选地 ${row.route2.minutes} / ${state.limit2} 分`;
         }
         dims.commute = { value: `${row.route.minutes}分`, why, score: bound(100 - 40 * ratio) };
       } else {
-        dims.commute = { value: state.work ? '待核' : '未设目的地', why: '设目的地后计分', score: null };
+        dims.commute = { value: state.work ? '暂无数据' : '未设目的地', why: '设目的地后计分', score: null };
       }
 
-      const estMonthly = row.rent?.median || (row.plate.unitPrice ? row.plate.unitPrice * (state.room === '2' ? 60 : state.room === '3' ? 85 : 35) : null);
+      const estMonthly = row.estMonthly || row.rent?.median || (row.plate.unitPrice ? row.plate.unitPrice * (state.room === '2' ? 60 : state.room === '3' ? 85 : 35) : null);
       if (!estMonthly) {
-        dims.rent = { value: '待补', why: '缺租金样本', score: null };
+        dims.rent = { value: '暂无数据', why: '暂无租金数据', score: null };
       } else if (state.budget > 0) {
         const diff = state.budget - estMonthly;
         dims.rent = {
           value: `约¥${money(estMonthly)}`,
-          why: diff >= 0 ? `预算余 ¥${money(diff)}` : `超预算 ¥${money(-diff)}`,
+          why: diff >= 0 ? `预算内余 ¥${money(diff)}` : `超预算 ¥${money(-diff)}`,
           score: bound(100 - 40 * estMonthly / state.budget),
         };
       } else {
-        dims.rent = { value: `${row.plate.unitPrice}元/㎡`, why: '填月租预算可算租金分', score: null };
+        dims.rent = { value: `${row.plate.unitPrice}元/㎡`, why: '填写月租预算即可计分', score: null };
       }
 
       for (const k of ['environment', 'convenience']) {
         const stars = entry?.[k];
         if (Number.isInteger(stars) && stars >= 1 && stars <= 5) {
-          dims[k] = { value: `${stars}星`, why: `实地体感${entry.observed ? ' · ' + entry.observed : ''}`, score: (stars - 1) * 25, stars };
+          dims[k] = { value: `${stars}星`, why: `看房评分${entry.observed ? ' · ' + entry.observed : ''}`, score: (stars - 1) * 25, stars };
         } else {
-          dims[k] = { value: '待踩点', why: k === 'environment' ? '待实地听噪采光' : '待实地走买菜路线', score: null, stars: null };
+          dims[k] = { value: '待看房', why: k === 'environment' ? '看房时记录噪音与采光' : '看房时记录买菜与生活便利', score: null, stars: null };
         }
       }
 
@@ -467,6 +597,82 @@
         });
       }
 
+      const isAffordableEvent = ev => ev?.type === '住房供应' || /(保租|公租|安居|配租)/.test(`${ev?.title || ''}${ev?.signalLabel || ''}${ev?.summary || ''}`);
+      const isMarketTrack = state.housingTrack !== 'affordable';
+
+      const buildMajorAlerts = (pl, trend, evs) => {
+        const alerts = [];
+        if (trend) {
+          if (Number.isFinite(trend.yoy) && trend.yoy >= 15) {
+            const pctStr = `+${Number(trend.yoy.toFixed(1))}%`;
+            alerts.push({
+              level: 'surge',
+              priority: trend.yoy >= 20 ? 3 : 2,
+              short: `暴涨 ${pctStr}`,
+              title: `${trend.marketName || pl.name}近一年租金暴涨 ${pctStr}`,
+              detail: `${trend.period} 商圈同户型挂牌同比大幅走高（环比 ${trend.mom > 0 ? '+' : ''}${trend.mom ?? 0}%），看房留意虚高要价`,
+              date: trend.period,
+              source: trend.url || '',
+              sourceLabel: '行情',
+            });
+          } else if (Number.isFinite(trend.mom) && trend.mom >= 10) {
+            const pctStr = `+${Number(trend.mom.toFixed(1))}%`;
+            alerts.push({
+              level: 'surge',
+              priority: 2,
+              short: `单月急涨 ${pctStr}`,
+              title: `${trend.marketName || pl.name}近一月租金急涨 ${pctStr}`,
+              detail: `${trend.period} 商圈同户型挂牌环比明显跳升，短期议价难度增加`,
+              date: trend.period,
+              source: trend.url || '',
+              sourceLabel: '行情',
+            });
+          }
+          if (Number.isFinite(trend.yoy) && trend.yoy <= -12) {
+            const pctStr = `${Number(trend.yoy.toFixed(1))}%`;
+            alerts.push({
+              level: 'drop',
+              priority: 2,
+              short: `大跌 ${pctStr}`,
+              title: `${trend.marketName || pl.name}近一年租金大跌 ${pctStr}`,
+              detail: `${trend.period} 商圈同户型挂牌同比显著回调，看房可重点往下谈价`,
+              date: trend.period,
+              source: trend.url || '',
+              sourceLabel: '行情',
+            });
+          } else if (Number.isFinite(trend.mom) && trend.mom <= -10) {
+            const pctStr = `${Number(trend.mom.toFixed(1))}%`;
+            alerts.push({
+              level: 'drop',
+              priority: 2,
+              short: `单月骤降 ${pctStr}`,
+              title: `${trend.marketName || pl.name}近一月租金骤降 ${pctStr}`,
+              detail: `${trend.period} 商圈同户型挂牌环比急跌，可现场核实最新成交底价`,
+              date: trend.period,
+              source: trend.url || '',
+              sourceLabel: '行情',
+            });
+          }
+        }
+        // 纳入核验过的重大变化事件（市场房模式下不以保租/公租/安居房配租作为异动提示）
+        for (const ev of evs) {
+          if (!['地铁开通', '产业迁移', '住房供应'].includes(ev.type)) continue;
+          if (isMarketTrack && isAffordableEvent(ev)) continue;
+          const level = ev.dir === 'tight' ? 'surge' : ev.dir === 'opportunity' ? 'drop' : 'event';
+          alerts.push({
+            level,
+            priority: 1,
+            short: ev.type,
+            title: ev.title,
+            detail: ev.summary || ev.signalLabel || '',
+            date: ev.date || '',
+            source: ev.source || '',
+            sourceLabel: '原文',
+          });
+        }
+        return alerts.sort((a, b) => b.priority - a.priority);
+      };
+
       for (const pl of atlas.plates) {
         const entry = store.getEntry(pl.id);
         const route = dest1 ? routeToDest(pl.id, pl.coord, pl.station, dest1, state) : null;
@@ -476,14 +682,15 @@
         const allMemberRows = pl.allMemberIds.map(id => placeRowById.get(id)).filter(Boolean);
         const allRents = allMemberRows.flatMap(r => r.place.rents || []);
         const allTypes = [...new Set(allMemberRows.flatMap(r => r.place.housingTypes || []))];
-        const rentInfo = filterRents(allRents, allTypes, state, entry);
+        const rentInfo = filterRents(allRents, allTypes, state, entry, true);
 
         const trendRoom = state.room || '1';
         const trend = pl.trend?.[trendRoom] || pl.trend?.['1'] || null;
         const evs = pl.eventIds.map(id => eventById.get(id)).filter(Boolean);
         const pols = pl.policyIds.map(id => policyById.get(id)).filter(Boolean);
         const risks = pl.riskIds.map(id => riskById.get(id)).filter(Boolean);
-        const oppEvents = evs.filter(e => e.dir === 'opportunity');
+        // 市场房模式下，捡漏/谈价线索仅采纳市场自身信号（同比下跌、同程低价、办公外迁、市场降租），不以保租/公租/安居房配租作为线索
+        const oppEvents = evs.filter(e => e.dir === 'opportunity' && (!isMarketTrack || !isAffordableEvent(e)));
         const tightEvents = evs.filter(e => e.dir === 'tight');
         const mixedEvents = evs.filter(e => e.dir === 'mixed');
 
@@ -497,29 +704,33 @@
         }
         if (tightEvents.length) arbScore -= 2;
 
-        let arbStatus = 'neutral', arbLabel = '常规';
-        if (arbScore >= 2 && !tightEvents.length) { arbStatus = 'opportunity'; arbLabel = '可议价'; }
-        else if ((oppEvents.length && tightEvents.length) || mixedEvents.length) { arbStatus = 'mixed'; arbLabel = '分歧'; }
-        else if (tightEvents.length) { arbStatus = 'tight'; arbLabel = '偏紧'; }
-        else if (arbScore === 1) { arbStatus = 'watch'; arbLabel = '留意'; }
+        let arbStatus = 'neutral', arbLabel = '平稳';
+        if (arbScore >= 2 && !tightEvents.length) { arbStatus = 'opportunity'; arbLabel = '可捡漏'; }
+        else if ((oppEvents.length && tightEvents.length) || mixedEvents.length) { arbStatus = 'mixed'; arbLabel = '有涨有跌'; }
+        else if (tightEvents.length) { arbStatus = 'tight'; arbLabel = '较紧俏'; }
+        else if (arbScore === 1) { arbStatus = 'watch'; arbLabel = '可关注'; }
 
         // Exclusions
         const exclusions = [];
         if (dest1 && (!route || route.minutes > state.limit)) exclusions.push('通勤超上限');
-        if (dest2 && state.limit2 > 0 && (!route2 || route2.minutes > state.limit2)) exclusions.push('二程超上限');
+        if (dest2 && state.limit2 > 0 && (!route2 || route2.minutes > state.limit2)) exclusions.push('备选通勤超上限');
         const stdSqm = state.sqm > 0 ? state.sqm : (state.room === '2' ? 60 : state.room === '3' ? 85 : 35);
+        const estMonthly = state.sqm > 0 && pl.unitPrice ? Math.round(pl.unitPrice * state.sqm) : null;
         if (state.budget > 0) {
-          const checkLow = rentInfo.best ? rentInfo.best.low : (pl.unitPrice ? pl.unitPrice * stdSqm * 0.85 : null);
+          const checkLow = estMonthly != null ? estMonthly : (rentInfo.best ? rentInfo.best.low : (pl.unitPrice ? pl.unitPrice * stdSqm * 0.85 : null));
           if (checkLow != null && checkLow > state.budget) exclusions.push('超预算');
         }
         if (state.housingTypes.length < 4 && allTypes.length > 0 && !allTypes.some(t => state.housingTypes.includes(t))) {
-          exclusions.push('形态不符');
+          exclusions.push('房型不符');
         }
-        if (state.verifiedOnly && !rentInfo.best) exclusions.push('缺实采样本');
-        if (state.oppOnly && arbStatus !== 'opportunity' && arbStatus !== 'watch') exclusions.push('无议价信号');
+        if (state.verifiedOnly && !rentInfo.best) exclusions.push('缺挂牌记录');
+        if (state.oppOnly && arbStatus !== 'opportunity' && arbStatus !== 'watch') exclusions.push('无议价线索');
 
         plateRows.push({
-          plate: pl, entry, route, route2,
+          plate: pl, entry, route, route2, estMonthly,
+          density: pl.streetDensity ?? districtDensityByName.get(pl.district) ?? null,
+          densityScope: pl.streetDensity != null ? 'street' : 'district',
+          alerts: buildMajorAlerts(pl, trend, evs),
           rent: rentInfo.best, rentsMatched: rentInfo.all,
           childRows, trend, events: evs, policies: pols, risks,
           nearbyFacs: nearbyFacilities(pl.coord),
@@ -544,7 +755,7 @@
               row.arbitrage.reasons.push(`同通勤圈（±10分）均价中位 ${med}元/㎡，本板块低 ${diff}元/㎡（-${pct}%）`);
               if (row.arbitrage.status === 'neutral' || row.arbitrage.status === 'watch') {
                 row.arbitrage.status = 'opportunity';
-                row.arbitrage.label = '可议价';
+                row.arbitrage.label = '可捡漏';
               }
             }
           }
@@ -579,9 +790,22 @@
         row.mastery = { saved: anySaved, visited, avgStar };
       }
 
+      // Evaluate affordable rental housing projects (existing + upcoming) with live commute & area estimate
+      const affordableRows = (atlas.affordableProjects || []).map(pr => ({
+        project: pr,
+        route: dest1 ? routeToDest(pr.id, pr.coord, pr.station, dest1, state) : null,
+        route2: dest2 ? routeToDest(pr.id, pr.coord, pr.station, dest2, state) : null,
+        estMonthly: state.sqm > 0 && pr.unitPrice ? Math.round(pr.unitPrice * state.sqm) : null,
+      }));
+      const affRowById = new Map(affordableRows.map(r => [r.project.id, r]));
+      for (const row of plateRows) {
+        row.affordable = (row.plate.affordableIds || []).map(id => affRowById.get(id)).filter(Boolean);
+      }
+
       return {
         dest1, dest2, refRow,
         plateRows, plateRowById, placeRowById,
+        affordableRows, affRowById,
         eligiblePlates,
       };
     }
@@ -632,7 +856,7 @@
     return {
       nodes, hubNodes, QUICK_DESTS, ALIASES, GRAIN_LABELS, FIT_NAMES, FIT_KEYS,
       resolveDestination, searchDestinations, nearbyFacilities, evaluateAll, landmarkAura, discoverNext,
-      plateById, placeById, landmarkById, eventById, policyById, facById, riskById,
+      plateById, placeById, landmarkById, eventById, policyById, facById, riskById, affById,
     };
   }
 

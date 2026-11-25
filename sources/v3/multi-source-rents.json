@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "asOf": "2026-11-25",
+  "note": "多信源公开租金对照库：汇集万科泊寓、龙湖冠寓、自如、魔方公寓、微棠新青年社区等明码标价长租品牌及贝壳/乐有家公开片区监测区间，与 58/安居客及政府参考价形成跨平台交叉核验。所有品牌公寓均注明水电核查提示，具体单间报价与优惠以各品牌当日官方房态为准。",
+  "entries": [
+    {
+      "plateId": "p-pingzhou",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "坪洲/西乡地铁口周边门店", "room": 1, "sqm": [22, 35], "low": 2200, "median": 2850, "high": 3500, "utility": "多为商水商电（纳保房源民水民电，签约前核对电费单价）", "period": "2026", "basis": "万科泊寓宝安西乡/坪洲片区精装单间与一房一厅公开区间", "source": "https://www.inboyu.com/" },
+        { "brand": "自如", "category": "brand_apartment", "store": "坪洲/西乡友家合租及整租", "room": 1, "sqm": [15, 38], "low": 1800, "median": 2650, "high": 3800, "utility": "合租多民水民电（另收约10%年服务费）；整租看具体小区", "period": "2026", "basis": "自如深圳西乡/坪洲单间合租（1800–2800）至一房整租（3000–3800）", "source": "https://sz.ziroom.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "坪洲商圈正规商品小区整租", "room": 1, "sqm": [35, 50], "low": 3200, "median": 3850, "high": 4500, "utility": "正规商品住宅，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家深圳公开监测：坪洲/西乡正规小区一房一厅区间（两房约5000–7000）", "source": "https://sz.zu.ke.com/zufang/rs%E5%9D%AA%E6%B4%B2/" }
+      ]
+    },
+    {
+      "plateId": "p-xixiang",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "西乡地铁口周边门店", "room": 1, "sqm": [22, 36], "low": 2200, "median": 2900, "high": 3600, "utility": "集中式多商水商电（纳保门店民水民电）", "period": "2026", "basis": "万科泊寓西乡片区大单间及一房一厅公开参考区间", "source": "https://www.inboyu.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "西乡商圈正规小区整租", "room": 2, "sqm": [62, 82], "low": 5000, "median": 5900, "high": 7000, "utility": "正规商品住宅，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：西乡成熟小区两房整租区间（一房约3200–4500）", "source": "https://sz.zu.ke.com/zufang/rs%E8%A5%BF%E4%B9%A1/" }
+      ]
+    },
+    {
+      "plateId": "p-gushu",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "固戍茶树公社 / 固戍航城里店", "room": 1, "sqm": [18, 34], "low": 1500, "median": 2200, "high": 3200, "utility": "村改/商改门店电费常见0.8–1.0元/度，看房核具体房号", "period": "2026", "basis": "万科泊寓固戍茶树公社等经济型单间（1500–2000）至精装带阳台单间（2200–3200）", "source": "https://www.inboyu.com/" },
+        { "brand": "微棠新青年社区", "category": "brand_apartment", "store": "西乡/固戍整栋青年社区", "room": 1, "sqm": [18, 32], "low": 1300, "median": 1850, "high": 2500, "utility": "村改集中社区，核实管理费与水电标准", "period": "2026", "basis": "微棠宝安片区整栋改造单间与小一房公开区间", "source": "https://www.v-town.com/" }
+      ]
+    },
+    {
+      "plateId": "p-hourui",
+      "items": [
+        { "brand": "龙湖冠寓", "category": "brand_apartment", "store": "深圳后瑞地铁站店（一期/二期）", "room": 1, "sqm": [20, 35], "low": 1500, "median": 2050, "high": 2600, "utility": "集中式公寓，看房核实商水商电与管理费", "period": "2026", "basis": "龙湖冠寓后瑞地铁站店开间与一居室公开起步区间", "source": "https://sz.zu.ke.com/zufang/rs%E5%90%8E%E7%91%9E/" }
+      ]
+    },
+    {
+      "plateId": "p-baozhong",
+      "items": [
+        { "brand": "自如", "category": "brand_apartment", "store": "宝安中心/新安自如友家与整租", "room": 1, "sqm": [18, 45], "low": 2200, "median": 3800, "high": 5500, "utility": "分散式住宅多民水民电，另收平台服务费", "period": "2026", "basis": "自如新安/宝中合租主卧（2200–3200）及品质整租一房（4000–5500）", "source": "https://sz.ziroom.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "宝安中心次新花园整租", "room": 1, "sqm": [40, 58], "low": 4500, "median": 5600, "high": 7000, "utility": "规范次新小区，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：宝中一房及小两房区间（大两房/改善盘常在8000–12000）", "source": "https://sz.zu.ke.com/zufang/rs%E5%AE%9D%E5%AE%89%E4%B8%AD%E5%BF%83/" }
+      ]
+    },
+    {
+      "plateId": "p-fanshen",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "新安/翻身片区品质门店", "room": 1, "sqm": [25, 40], "low": 2500, "median": 3400, "high": 4500, "utility": "核实是否纳保民水民电或商业水电", "period": "2026", "basis": "万科泊寓新安/翻身片区精装单间与一房一厅公开区间", "source": "https://www.inboyu.com/" },
+        { "brand": "魔方公寓", "category": "brand_apartment", "store": "新安/宝安商圈集中式门店", "room": 1, "sqm": [25, 42], "low": 3200, "median": 4100, "high": 5200, "utility": "酒店式集中管理，多为商水商电与固定管理费", "period": "2026", "basis": "魔方/冠寓类品牌在新安近地铁核心门店一居公开参考带", "source": "https://sz.zu.ke.com/zufang/rs%E7%BF%BB%E8%BA%AB/" }
+      ]
+    },
+    {
+      "plateId": "p-lingzhi",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "新安老城周边门店", "room": 1, "sqm": [24, 38], "low": 2500, "median": 3300, "high": 4200, "utility": "核实具体门店水电口径", "period": "2026", "basis": "万科泊寓新安片区单间及一房一厅公开区间", "source": "https://www.inboyu.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "新安成熟花园小区整租", "room": 2, "sqm": [65, 85], "low": 5200, "median": 6200, "high": 7500, "utility": "成熟住宅小区，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：灵芝/新安成熟两房整租主流区间", "source": "https://shenzhen.leyoujia.com/zf/?n=%E7%81%B5%E8%8A%9D" }
+      ]
+    },
+    {
+      "plateId": "p-liuxian",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "南山万科云城旗舰店", "room": 1, "sqm": [28, 45], "low": 3500, "median": 4200, "high": 5000, "utility": "大型集中式社区，部分纳保房源民水民电，商办栋按商水商电", "period": "2026", "basis": "泊寓云城旗舰店公开单间/优选一房区间（大一房及两房约6000–7500）", "source": "https://www.inboyu.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "留仙洞/西丽次新公寓与住宅", "room": 1, "sqm": [35, 55], "low": 4200, "median": 5200, "high": 6500, "utility": "区分万科云城商住公寓与周边民用住宅水电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：留仙洞总部基地周边整租一房区间", "source": "https://sz.zu.ke.com/zufang/rs%E7%95%99%E4%BB%99%E6%B4%9E/" }
+      ]
+    },
+    {
+      "plateId": "p-xilicenter",
+      "items": [
+        { "brand": "微棠新青年社区", "category": "brand_apartment", "store": "西丽/大学城周边整栋社区", "room": 1, "sqm": [20, 35], "low": 1800, "median": 2600, "high": 3500, "utility": "村改集中社区，核实水电单价与网络管理费", "period": "2026", "basis": "微棠及同类整栋青年社区在西丽片区单间/LOFT公开参考区间", "source": "https://www.v-town.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "西丽商圈小区整租/合租", "room": 1, "sqm": [20, 48], "low": 2400, "median": 3800, "high": 5200, "utility": "住宅小区多民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：西丽合租单间约2200–3800，整租一/两房约4500–7500", "source": "https://sz.zu.ke.com/zufang/rs%E8%A5%BF%E4%B8%BD/" }
+      ]
+    },
+    {
+      "plateId": "p-gaoxinyuan",
+      "items": [
+        { "brand": "自如", "category": "brand_apartment", "store": "科技园/大冲自如友家及整租", "room": 1, "sqm": [16, 45], "low": 2400, "median": 3600, "high": 6500, "utility": "合租次/主卧约2200–4200；整租一房约4500–7000（另收服务费）", "period": "2026", "basis": "自如深圳科技园片区公开合租及整租价格带", "source": "https://sz.ziroom.com/" },
+        { "brand": "魔方公寓", "category": "brand_apartment", "store": "科技园核心集中式门店", "room": 1, "sqm": [25, 45], "low": 3800, "median": 5100, "high": 6500, "utility": "集中式商务公寓，核实商水商电与管理费", "period": "2026", "basis": "魔方/泊寓等品牌科技园核心门店单间与一房一厅公开区间", "source": "https://sz.zu.ke.com/zufang/rs%E9%AB%98%E6%96%B0%E5%9B%AD/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "科技园/大冲商品房整租", "room": 2, "sqm": [60, 85], "low": 7000, "median": 8500, "high": 10500, "utility": "正规商品住宅，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：科技园次新小区两房整租主流区间", "source": "https://shenzhen.leyoujia.com/zf/kejiyuan/" }
+      ]
+    },
+    {
+      "plateId": "p-nantougucheng",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "南头古城店", "room": 1, "sqm": [22, 38], "low": 3000, "median": 3900, "high": 4800, "utility": "城中村文旅改造项目，看房核水电单价与隔音", "period": "2026", "basis": "万科泊寓南头古城周边公开单间至一房区间", "source": "https://www.inboyu.com/" }
+      ]
+    },
+    {
+      "plateId": "p-baishizhou",
+      "items": [
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "白石洲/沙河周边整租与单间", "room": 1, "sqm": [22, 42], "low": 2400, "median": 3600, "high": 5000, "utility": "区分周边老小区民水民电与公寓商水商电", "period": "2025–2026", "basis": "紧邻科技园与世界之窗的1号线过渡型租住片区公开参考区间", "source": "https://sz.zu.ke.com/zufang/rs%E7%99%BD%E7%9F%B3%E6%B4%B2/" }
+      ]
+    },
+    {
+      "plateId": "p-nanyou",
+      "items": [
+        { "brand": "龙湖冠寓", "category": "brand_apartment", "store": "深圳南山地铁站店（海德二道）", "room": 1, "sqm": [28, 45], "low": 4200, "median": 4800, "high": 5600, "utility": "部分纳保房源享民水民电，普通商寓按商业标准", "period": "2026", "basis": "龙湖冠寓南山站核心门店一房及一房一厅公开起步价4200–4500起", "source": "https://sz.zu.ke.com/zufang/rs%E5%8D%97%E6%B2%B9/" }
+      ]
+    },
+    {
+      "plateId": "p-qianwan",
+      "items": [
+        { "brand": "龙湖冠寓", "category": "brand_apartment", "store": "前海湾花园店 / 妈湾店", "room": 2, "sqm": [55, 75], "low": 5100, "median": 5450, "high": 5800, "utility": "大型租赁社区，看房确认民水民电与物业杂费", "period": "2026", "basis": "龙湖冠寓前海湾/妈湾片区两房一厅整租公开参考区间", "source": "https://sz.zu.ke.com/zufang/rs%E5%89%8D%E6%B5%B7/" }
+      ]
+    },
+    {
+      "plateId": "p-wuhe",
+      "items": [
+        { "brand": "微棠新青年社区", "category": "brand_apartment", "store": "坂田/五和整栋社区门店", "room": 1, "sqm": [20, 40], "low": 1500, "median": 2150, "high": 2700, "utility": "整栋村改社区，核实管理费与水电标准", "period": "2026", "basis": "微棠坂田/五和片区单间及40㎡一居公开参考区间", "source": "https://www.v-town.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "坂田/五和商品小区整租", "room": 2, "sqm": [60, 82], "low": 3800, "median": 5000, "high": 6500, "utility": "正规商品住宅，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：万科城/光雅园等小区整租一至两房主流区间", "source": "https://sz.zu.ke.com/zufang/rs%E5%9D%82%E7%94%B0/" }
+      ]
+    },
+    {
+      "plateId": "p-huaweibantian",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "坂田旗舰店 / 岗头公社店", "room": 1, "sqm": [22, 42], "low": 2500, "median": 3900, "high": 5200, "utility": "旗舰店配套全，核实纳保民水电或商业水电", "period": "2026", "basis": "泊寓岗头公社（约2500起）至坂田万致天地旗舰店（3800–5200）", "source": "https://www.inboyu.com/" }
+      ]
+    },
+    {
+      "plateId": "p-minzhi",
+      "items": [
+        { "brand": "万科泊寓", "category": "brand_apartment", "store": "民治/深圳北站周边门店", "room": 1, "sqm": [24, 40], "low": 2500, "median": 3400, "high": 4500, "utility": "集中式门店核实水电口径", "period": "2026", "basis": "万科泊寓民治及北站片区单间与一房一厅公开参考区间", "source": "https://www.inboyu.com/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "北站/红山次新小区整租", "room": 1, "sqm": [35, 55], "low": 3500, "median": 4500, "high": 5500, "utility": "次新商品房，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：民治/红山一房一厅（3500–5500）及两至三房（6000–9000）", "source": "https://sz.zu.ke.com/zufang/rs%E6%B0%91%E6%B2%BB/" }
+      ]
+    },
+    {
+      "plateId": "p-minle",
+      "items": [
+        { "brand": "微棠新青年社区", "category": "brand_apartment", "store": "白石龙/梅林关门店", "room": 1, "sqm": [22, 40], "low": 1500, "median": 2300, "high": 2700, "utility": "整栋改造青年社区，看房核水电单价与管理费", "period": "2026", "basis": "微棠白石龙/梅林关开间至40㎡标准一居公开参考价（2500–2700为主力一居）", "source": "https://www.v-town.com/" }
+      ]
+    },
+    {
+      "plateId": "p-shangmeilin",
+      "items": [
+        { "brand": "魔方公寓", "category": "brand_apartment", "store": "上梅林集中式品牌公寓", "room": 1, "sqm": [24, 40], "low": 2800, "median": 3650, "high": 4600, "utility": "商业集中公寓，核实水电单价与宽带管理费", "period": "2026", "basis": "魔方/金地草莓社区等品牌在上梅林精装单间与一居公开参考带", "source": "https://sz.zu.ke.com/zufang/rs%E4%B8%8A%E6%A2%85%E6%9E%97/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "上梅林电梯商品房整租", "room": 1, "sqm": [36, 52], "low": 4000, "median": 5000, "high": 6200, "utility": "正规电梯小区，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：上梅林电梯一房（4000–6200）及两房（6800–9500）", "source": "https://shenzhen.leyoujia.com/zf/?n=%E4%B8%8A%E6%A2%85%E6%9E%97" }
+      ]
+    },
+    {
+      "plateId": "p-xiameilin",
+      "items": [
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "下梅林成熟小区整租", "room": 1, "sqm": [34, 48], "low": 3500, "median": 4400, "high": 5500, "utility": "成熟花园老小区为主，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：下梅林一房（3500–5500）及步梯老社区性价比房源", "source": "https://sz.zu.ke.com/zufang/rs%E4%B8%8B%E6%A2%85%E6%9E%97/" }
+      ]
+    },
+    {
+      "plateId": "p-chegongmiao",
+      "items": [
+        { "brand": "魔方公寓", "category": "brand_apartment", "store": "车公庙核心商务公寓门店", "room": 1, "sqm": [25, 45], "low": 3500, "median": 4800, "high": 6000, "utility": "商务集中式公寓，多商水商电，位置极佳", "period": "2026", "basis": "魔方及同级品牌公寓车公庙核心区精装单间/一居公开区间", "source": "https://sz.zu.ke.com/zufang/chegongmiao/" },
+        { "brand": "贝壳/乐有家", "category": "broker_market", "store": "车公庙/竹子林商品房整租", "room": 1, "sqm": [38, 58], "low": 5000, "median": 6800, "high": 9000, "utility": "正规商品住宅，民水民电", "period": "2025–2026", "basis": "贝壳/乐有家公开监测：福田车公庙核心区一至两房整租主流区间", "source": "https://shenzhen.leyoujia.com/zf/chegongmiao/" }
+      ]
+    }
+  ]
+}

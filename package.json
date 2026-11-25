@@ -6,7 +6,11 @@
   "scripts": {
     "data": "node tools/build_data.cjs",
     "build": "node tools/build_data.cjs && node tools/build.cjs",
+    "build:web": "node tools/build_web.cjs",
     "check": "node tools/build.cjs --check",
+    "deploy:check": "node tools/build.cjs --check && node tools/build_web.cjs --check",
+    "update:data": "node tools/update_data.cjs",
+    "update:data:dry": "node tools/update_data.cjs --dry-run",
     "test": "node --test"
   }
 }

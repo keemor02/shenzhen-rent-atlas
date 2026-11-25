@@ -7,38 +7,59 @@
   const FORMAT = 'shenzhen-rent-journal';
 
   function createStore(onChange) {
+    const MARKET_COLOR_LAYERS = ['rent', 'commute', 'trend', 'premium', 'density'];
+    const COLOR_LAYERS = ['rent', 'commute', 'trend', 'premium', 'affordable', 'density'];
+    const ALL_LAYERS = [...COLOR_LAYERS, 'facilities', 'risks'];
+    const MAP_FILTER_KEYS = ['hub', 'mall', 'transit', 'terrain', 'neutralEvents', 'majorAlerts'];
+    const DEFAULT_MAP_FILTER = { hub: true, mall: true, transit: true, terrain: true, neutralEvents: true, majorAlerts: true };
+
     const state = {
-      lens: 'rent',             // rent | commute | radar
-      rentSub: 'unit',          // unit (每平米均价) | yoy | mom | macro
+      housingTrack: 'market',   // 'market'（民房/小区/公寓市场租房）| 'affordable'（政府保租房专场）
+      layers: {
+        rent: true,             // 租金（单价或按面积估月租）
+        commute: false,         // 通勤时长（设目的地后自动开启）
+        trend: false,           // 过去涨跌（近一年同比 / 近一月环比）
+        premium: false,         // 议价与溢价（园区15分步行圈 + 外迁线 + 可议价/偏贵）
+        affordable: false,      // 保租房（申请中 / 往期批次 / 规划在建）
+        density: false,         // 人口密度（区级官方密度）
+        facilities: false,      // 配套（商场 / 学校 / 公园标点）
+        risks: false,           // 避坑（6 类公开风险标点）
+      },
+      mapFilter: { ...DEFAULT_MAP_FILTER }, // 地图物体与中立事件显隐筛选
+      fillLayer: 'rent',        // 当前负责底图着色的主图层
+      lastMarketFill: 'rent',   // 切回市场房时恢复的底色图层
+      trendKind: 'yoy',         // yoy (近一年/同比) | mom (近一月/环比)
+      macroOpen: false,         // 是否进入各区均价全景
       macroMetric: 'community', // community | apartment | village | listing | ref2022 | density
-      layout: 'geo',            // geo | radial (10分钟时间圈)
-      showFacilities: false,    // 叠加核验设施
+      affFilter: '',            // '' | active | recent | upcoming
+      layout: 'geo',            // geo | radial (通勤时间圈)
       facFilter: '',
-      showRisks: false,         // 默认关闭散落避坑图标，按需一键叠加（让拼图本身极度干净！）
       riskFilter: '',
       watchlistOpen: false,
-      work: '',                 // 任意地标/商圈/地铁站/公交站/小区/板块名
+      work: '',                 // 任意地标/商圈/地铁站/公交站/小区/片区名
       work2: '',
       mode: 'rail',             // rail | bus | drive
+      peak: false,              // false=平峰 | true=早高峰（含限流排队与潮汐拥堵估算）
       limit: 50,
       limit2: 0,
       access: 5,
       egress: 5,
-      budget: 0,                // 月租上限（用于在板块内筛选与适配评分）
+      budget: 0,                // 月租预算上限
       room: '1',
-      sqm: 0,
+      sqm: 0,                   // 期望居住面积（㎡）：填写后全图实时换算预估月租
       housingTypes: ['village', 'oldEstate', 'modernEstate', 'apartment'],
       verifiedOnly: false,
       oppOnly: false,
       usedHubs: [],
-      referenceId: '',          // 参照板块或小区 ID
+      referenceId: '',          // 对比片区或小区 ID
       weights: { commute: 1, rent: 1, environment: 1, convenience: 1 },
       selectedPlateId: '',
-      selectedPlaceId: '',      // 板块内点开具体某小区/村落
+      selectedPlaceId: '',
       selectedLandmarkId: '',
       selectedDistrict: '',
       selectedRiskId: '',
       selectedFacilityId: '',
+      selectedAffId: '',
       focusSection: '',
       seen: new Set(),
       status: '',
@@ -95,17 +116,47 @@
       try {
         const s = JSON.parse(raw);
         if (!s || typeof s !== 'object') return;
-        if (['rent', 'commute', 'radar'].includes(s.lens)) state.lens = s.lens;
-        if (['unit', 'yoy', 'mom', 'macro'].includes(s.rentSub)) state.rentSub = s.rentSub;
+        if (s.layers && typeof s.layers === 'object') {
+          for (const k of ALL_LAYERS) {
+            if (typeof s.layers[k] === 'boolean') state.layers[k] = s.layers[k];
+          }
+        } else if (typeof s.lens === 'string') {
+          // 自动兼容旧版单选视角会话
+          state.layers.rent = s.lens === 'rent';
+          state.layers.commute = s.lens === 'commute';
+          state.layers.premium = s.lens === 'radar';
+          state.layers.affordable = s.lens === 'affordable';
+          state.layers.facilities = s.showFacilities === true;
+          state.layers.risks = s.showRisks === true;
+          if (s.rentSub === 'yoy' || s.rentSub === 'mom') {
+            state.layers.trend = true;
+            state.trendKind = s.rentSub;
+            state.fillLayer = 'trend';
+          } else {
+            state.fillLayer = s.lens === 'radar' ? 'premium' : (COLOR_LAYERS.includes(s.lens) ? s.lens : 'rent');
+          }
+          if (s.rentSub === 'macro') state.macroOpen = true;
+        }
+        if (['market', 'affordable'].includes(s.housingTrack)) state.housingTrack = s.housingTrack;
+        if (s.mapFilter && typeof s.mapFilter === 'object') {
+          for (const k of MAP_FILTER_KEYS) {
+            if (typeof s.mapFilter[k] === 'boolean') state.mapFilter[k] = s.mapFilter[k];
+          }
+        }
+        if (COLOR_LAYERS.includes(s.fillLayer)) state.fillLayer = s.fillLayer;
+        if (MARKET_COLOR_LAYERS.includes(s.lastMarketFill)) state.lastMarketFill = s.lastMarketFill;
+        if (state.housingTrack === 'affordable') state.layers.affordable = true;
+        if (['yoy', 'mom'].includes(s.trendKind)) state.trendKind = s.trendKind;
+        if (typeof s.macroOpen === 'boolean') state.macroOpen = s.macroOpen;
+        if (['', 'active', 'recent', 'upcoming'].includes(s.affFilter)) state.affFilter = s.affFilter;
         if (['community', 'apartment', 'village', 'listing', 'ref2022', 'density'].includes(s.macroMetric)) state.macroMetric = s.macroMetric;
         if (['geo', 'radial'].includes(s.layout)) state.layout = s.layout;
-        if (typeof s.showFacilities === 'boolean') state.showFacilities = s.showFacilities;
         if (typeof s.facFilter === 'string') state.facFilter = s.facFilter;
-        if (typeof s.showRisks === 'boolean') state.showRisks = s.showRisks;
         if (typeof s.riskFilter === 'string') state.riskFilter = s.riskFilter;
         if (typeof s.work === 'string') state.work = s.work;
         if (typeof s.work2 === 'string') state.work2 = s.work2;
         if (['rail', 'bus', 'drive'].includes(s.mode)) state.mode = s.mode;
+        if (typeof s.peak === 'boolean') state.peak = s.peak;
         if (Number.isFinite(s.limit) && s.limit >= 15 && s.limit <= 90) state.limit = s.limit;
         if (Number.isFinite(s.limit2) && s.limit2 >= 0) state.limit2 = s.limit2;
         if (Number.isFinite(s.access) && s.access >= 0) state.access = s.access;
@@ -129,14 +180,96 @@
 
     function saveSession() {
       writeLS(SESSION_KEY, JSON.stringify({
-        lens: state.lens, rentSub: state.rentSub, macroMetric: state.macroMetric, layout: state.layout,
-        showFacilities: state.showFacilities, facFilter: state.facFilter, showRisks: state.showRisks, riskFilter: state.riskFilter,
-        work: state.work, work2: state.work2, mode: state.mode, limit: state.limit, limit2: state.limit2,
+        housingTrack: state.housingTrack, mapFilter: state.mapFilter, lastMarketFill: state.lastMarketFill,
+        layers: state.layers, fillLayer: state.fillLayer, trendKind: state.trendKind, macroOpen: state.macroOpen,
+        affFilter: state.affFilter, macroMetric: state.macroMetric, layout: state.layout,
+        facFilter: state.facFilter, riskFilter: state.riskFilter,
+        work: state.work, work2: state.work2, mode: state.mode, peak: state.peak, limit: state.limit, limit2: state.limit2,
         access: state.access, egress: state.egress, budget: state.budget, room: state.room, sqm: state.sqm,
         housingTypes: state.housingTypes, verifiedOnly: state.verifiedOnly, oppOnly: state.oppOnly,
         usedHubs: state.usedHubs, referenceId: state.referenceId, weights: state.weights,
         seen: [...state.seen],
       }));
+    }
+
+    // 切换房源轨道：市场房（城中村/民房/老小区/电梯小区/商业公寓）vs 政府保租房（独立专场，绝不混杂）
+    function setHousingTrack(track) {
+      if (!['market', 'affordable'].includes(track) || track === state.housingTrack) return;
+      const nextLayers = { ...state.layers };
+      if (track === 'affordable') {
+        const prevFill = MARKET_COLOR_LAYERS.includes(state.fillLayer) ? state.fillLayer : state.lastMarketFill;
+        nextLayers.affordable = true;
+        patch({
+          housingTrack: 'affordable',
+          layers: nextLayers,
+          lastMarketFill: prevFill || 'rent',
+          fillLayer: 'affordable',
+          macroOpen: false,
+          layout: 'geo',
+          status: '已切至「政府保租房」专场（与民房/小区/公寓市场房独立分开）',
+        });
+      } else {
+        nextLayers.affordable = false;
+        const activeMarket = MARKET_COLOR_LAYERS.filter(k => nextLayers[k]);
+        if (!activeMarket.length) nextLayers.rent = true;
+        const restoreFill = nextLayers[state.lastMarketFill] ? state.lastMarketFill : (MARKET_COLOR_LAYERS.find(k => nextLayers[k]) || 'rent');
+        patch({
+          housingTrack: 'market',
+          layers: nextLayers,
+          fillLayer: restoreFill,
+          macroOpen: false,
+          selectedAffId: '',
+          status: '已切回「市场租房」（民房 / 小区 / 商业公寓）',
+        });
+      }
+    }
+
+    function toggleMapFilter(key) {
+      if (!MAP_FILTER_KEYS.includes(key)) return;
+      patch({ mapFilter: { ...state.mapFilter, [key]: !state.mapFilter[key] }, status: '' });
+    }
+
+    function applyMapPreset(mode) {
+      if (mode === 'minimal') {
+        patch({
+          mapFilter: { hub: false, mall: false, transit: false, terrain: false, neutralEvents: false, majorAlerts: false },
+          layers: { ...state.layers, facilities: false, risks: false },
+          facFilter: '', riskFilter: '',
+          status: '已开启极简地图：隐藏中立物体与事件，只专注片区数据',
+        });
+      } else {
+        patch({
+          mapFilter: { ...DEFAULT_MAP_FILTER },
+          layers: { ...state.layers, facilities: false, risks: false },
+          facFilter: '', riskFilter: '',
+          status: '已恢复默认地图标点显示',
+        });
+      }
+    }
+
+    // 自由组合多图层开关：打开某数据层时自动接管底色，关闭时自动顺延给下一个已开主图层
+    function toggleLayer(name, extra = {}) {
+      if (!ALL_LAYERS.includes(name)) return;
+      const next = { ...state.layers, [name]: !state.layers[name] };
+      let nextFill = state.fillLayer;
+      const pool = state.housingTrack === 'affordable' ? ['affordable', 'commute'] : COLOR_LAYERS;
+      const isColor = pool.includes(name);
+      if (next[name]) {
+        if (isColor) nextFill = name;
+      } else if (isColor && nextFill === name) {
+        const fallback = pool.find(k => next[k]);
+        nextFill = fallback || (state.housingTrack === 'affordable' ? 'affordable' : '');
+      }
+      const nextLayout = (!next.commute && state.layout === 'radial') ? 'geo' : state.layout;
+      const nextMarketFill = MARKET_COLOR_LAYERS.includes(nextFill) ? nextFill : state.lastMarketFill;
+      patch({ layers: next, fillLayer: nextFill, lastMarketFill: nextMarketFill, macroOpen: false, layout: nextLayout, ...extra });
+    }
+
+    function setFillLayer(name) {
+      if (!COLOR_LAYERS.includes(name)) return;
+      const next = { ...state.layers, [name]: true };
+      const nextMarketFill = MARKET_COLOR_LAYERS.includes(name) ? name : state.lastMarketFill;
+      patch({ layers: next, fillLayer: name, lastMarketFill: nextMarketFill, macroOpen: false, status: '' });
     }
 
     function patch(next, silent = false) {
@@ -260,8 +393,9 @@
     loadSession();
 
     return {
-      state, patch, toggleUsedHub, getEntry, isSaved, toggleSave, saveNote,
-      exportBackup, importBackup, savedEntries, saveSession,
+      state, patch, toggleLayer, setFillLayer, setHousingTrack, toggleMapFilter, applyMapPreset,
+      toggleUsedHub, getEntry, isSaved, toggleSave, saveNote,
+      exportBackup, importBackup, savedEntries, saveSession, COLOR_LAYERS, MARKET_COLOR_LAYERS,
     };
   }
 

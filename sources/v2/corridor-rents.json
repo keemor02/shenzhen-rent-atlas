@@ -6,7 +6,8 @@
     "village": { "label": "城中村", "utility": "多为城中村自定/商业水电（看房必核电费单价，常见 0.9–1.5 元/度）" },
     "oldEstate": { "label": "老小区", "utility": "多为民水民电、实用率高（重点看有无电梯与楼龄）" },
     "modernEstate": { "label": "电梯小区", "utility": "规范物业、民水民电（留意物业费与停车位）" },
-    "apartment": { "label": "公寓/保租房", "utility": "保租房需核准入资格；商业公寓需核是否商水商电与管理费" }
+    "apartment": { "label": "商业公寓", "utility": "市场化长租/商住公寓，随租随签（务必核实是否商水商电及管理费）" },
+    "affordable": { "label": "保租房", "utility": "政府/园区保障性租赁住房，约市场价6折（须满足社保/无房或单位申请条件）" }
   },
   "officialAffordableProjects": [
     {
@@ -16,12 +17,12 @@
       "street": "西丽街道",
       "station": "留仙洞",
       "coord": [113.9385, 22.5782],
-      "housingTypes": ["apartment"],
+      "housingTypes": ["affordable"],
       "supplyUnits": 800,
       "policyId": "ns-employer-2026-045",
       "rents": [
-        { "type": "apartment", "room": 1, "low": 2090, "median": 2600, "high": 3110, "sqm": [43, 64], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（约800套，43-64㎡单间，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
-        { "type": "apartment", "room": 2, "low": 4131, "median": 4400, "high": 4666, "sqm": [85, 96], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（85-96㎡两房，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+        { "type": "affordable", "room": 1, "low": 2090, "median": 2600, "high": 3110, "sqm": [43, 64], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（约800套，43-64㎡单间，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "affordable", "room": 2, "low": 4131, "median": 4400, "high": 4666, "sqm": [85, 96], "unitPrice": 48.6, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 48.6元/㎡·月（85-96㎡两房，须通过南山用人单位申报）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
       ],
       "livability": {
         "pros": ["留仙洞总部基地核心，5/13号线双轨", "官方保租房基准价远低于周边商品房"],
@@ -35,13 +36,13 @@
       "street": "南头街道",
       "station": "中山公园",
       "coord": [113.9182, 22.5485],
-      "housingTypes": ["apartment"],
+      "housingTypes": ["affordable"],
       "supplyUnits": 410,
       "policyId": "ns-employer-2026-045",
       "rents": [
-        { "type": "apartment", "room": 1, "low": 2059, "median": 2059, "high": 2200, "sqm": [39, 39], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（287套约39㎡单间）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
-        { "type": "apartment", "room": 2, "low": 3643, "median": 3643, "high": 3850, "sqm": [69, 69], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（82套约69㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
-        { "type": "apartment", "room": 3, "low": 4699, "median": 4699, "high": 4950, "sqm": [89, 89], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（41套约89㎡三房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+        { "type": "affordable", "room": 1, "low": 2059, "median": 2059, "high": 2200, "sqm": [39, 39], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（287套约39㎡单间）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "affordable", "room": 2, "low": 3643, "median": 3643, "high": 3850, "sqm": [69, 69], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（82套约69㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "affordable", "room": 3, "low": 4699, "median": 4699, "high": 4950, "sqm": [89, 89], "unitPrice": 52.8, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 52.8元/㎡·月（41套约89㎡三房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
       ],
       "livability": {
         "pros": ["近中山公园与南头古城生活圈", "410套集中供应形成南头一房/两房价格参照"],
@@ -55,12 +56,12 @@
       "street": "招商街道",
       "station": "赤湾",
       "coord": [113.8985, 22.4796],
-      "housingTypes": ["apartment"],
+      "housingTypes": ["affordable"],
       "supplyUnits": 100,
       "policyId": "ns-employer-2026-045",
       "rents": [
-        { "type": "apartment", "room": 1, "low": 2296, "median": 3097, "high": 3364, "sqm": [43, 63], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（43㎡单间至63㎡一房一厅）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
-        { "type": "apartment", "room": 2, "low": 3952, "median": 4110, "high": 4272, "sqm": [74, 80], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（74-80㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
+        { "type": "affordable", "room": 1, "low": 2296, "median": 3097, "high": 3364, "sqm": [43, 63], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（43㎡单间至63㎡一房一厅）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" },
+        { "type": "affordable", "room": 2, "low": 3952, "median": 4110, "high": 4272, "sqm": [74, 80], "unitPrice": 53.4, "grain": "official_affordable", "period": "2026-11", "basis": "南山住保租〔2026〕045号基准租金 53.4元/㎡·月（74-80㎡两房）", "source": "https://www.szns.gov.cn/bsfw/ztfw/zflyfwzt/xmfpjtcgg/content/post_13071257.html", "sourceName": "南山区住建局 045号通告" }
       ],
       "livability": {
         "pros": ["2/5号线双轨始发，有座通勤前海/蛇口"],

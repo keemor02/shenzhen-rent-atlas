@@ -14,81 +14,69 @@
     <span class="brand-mark">深圳租房</span>
 
     <div class="search-wrap" id="search-wrap">
-      <div class="search-box">
+      <div class="search-box needs-dest" id="search-box">
         <span class="search-ico" aria-hidden="true">⌕</span>
-        <input id="omni-input" type="text" autocomplete="off" placeholder="搜地标 / 商圈 / 地铁站 / 小区设为目的地…">
+        <input id="omni-input" type="text" autocomplete="off" placeholder="① 先设目的地（园区 / 商圈 / 地铁 / 小区）…">
       </div>
       <div id="omni-pop" class="popover omni-pop" hidden></div>
     </div>
 
-    <div id="work-pill" class="work-pill" hidden></div>
+    <!-- 目的地 → 通勤方式 → 时长上限 一体化联动胶囊（设好目的地自动解锁高亮） -->
+    <div id="commute-hub" class="commute-hub" hidden aria-label="目的地与通勤联动控制">
+      <div id="work-pill" class="work-pill"></div>
+      <span class="hub-arrow" aria-hidden="true">←</span>
+      <div class="mode-pills" id="mode-seg" role="group" aria-label="出行方式">
+        <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
+        <button type="button" data-mode="bus" aria-pressed="false">公交</button>
+        <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
+      </div>
+      <div class="mode-pills peak-pills" id="peak-seg" role="group" aria-label="出行时段" title="平峰为路网基准；早高峰叠加深圳地铁限流排队或早高峰潮汐拥堵估算">
+        <button type="button" data-peak="0" aria-pressed="true">平峰</button>
+        <button type="button" data-peak="1" aria-pressed="false">早高峰</button>
+      </div>
+      <label class="limit-pill" title="单程通勤时长上限">
+        <span class="limit-tag">≤<strong id="limit-readout">50分</strong></span>
+        <input id="limit-range" type="range" min="15" max="90" step="5" value="50" aria-label="单程通勤上限">
+      </label>
+    </div>
   </div>
 
-  <div class="tb-filters" aria-label="核心筛选">
-    <label class="pill-field" title="月租预算上限（元）">
-      <span>¥</span>
-      <input id="budget-input" type="number" min="500" max="100000" step="100" placeholder="月租不限">
-    </label>
-
-    <select id="room-select" class="pill-select" aria-label="居室">
-      <option value="1">一室</option>
-      <option value="2">二室</option>
-      <option value="3">三室</option>
-      <option value="">不限居室</option>
-    </select>
-
+  <div class="tb-filters" aria-label="居住要求">
     <div class="pop-anchor">
-      <button type="button" id="types-btn" class="pill-btn" aria-expanded="false">形态 ▾</button>
-      <div id="types-pop" class="popover types-pop" hidden>
-        <div class="pop-title">接受的居住形态</div>
-        <div id="housing-type-chips" class="chip-grid"></div>
-      </div>
-    </div>
-
-    <div class="pop-anchor">
-      <button type="button" id="filter-btn" class="pill-btn" aria-expanded="false">筛选<span id="extra-badge" class="badge-dot" hidden></span></button>
-      <div id="filter-pop" class="popover filter-pop" hidden>
+      <button type="button" id="req-btn" class="pill-btn" aria-expanded="false"><span id="req-btn-label">居住要求 ▾</span><span id="extra-badge" class="badge-dot" hidden></span></button>
+      <div id="req-pop" class="popover req-pop" hidden>
         <div class="pop-head">
-          <strong>更多条件</strong>
-          <button type="button" id="reset-all" class="link-btn">重置</button>
+          <strong>居住要求与视图</strong>
+          <button type="button" id="reset-all" class="link-btn">重置全部</button>
         </div>
         <div class="filter-rows">
           <div class="f-row">
-            <span class="f-label">出行方式</span>
-            <div class="seg-mini" id="mode-seg">
-              <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
-              <button type="button" data-mode="bus" aria-pressed="false">公交</button>
-              <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
-            </div>
-          </div>
-          <label class="f-row">
-            <span class="f-label">单程上限 <strong id="limit-readout">50分</strong></span>
-            <input id="limit-range" type="range" min="15" max="90" step="5" value="50">
-          </label>
-          <div class="f-row-2">
-            <label class="f-col"><span>第二目的地</span><input id="work2-input" type="text" list="dest-options" autocomplete="off" placeholder="选填，如 企鹅岛"></label>
-            <label class="f-col"><span>二程上限(分)</span><input id="limit2-input" type="number" min="10" max="120" step="5" placeholder="不限"></label>
-          </div>
-          <div class="f-row-2">
-            <label class="f-col"><span>面积下限(㎡)</span><input id="sqm-input" type="number" min="10" max="300" step="5" placeholder="不限"></label>
-            <label class="f-col"><span>首末步行(分)</span>
-              <div class="inline-pair">
-                <input id="access-input" type="number" min="0" max="40" value="5" title="出发步行">
-                <span>+</span>
-                <input id="egress-input" type="number" min="0" max="40" value="5" title="到岗步行">
+            <span class="f-label">期望居住面积（㎡）<span class="f-hint">填后全图实时算估月租</span></span>
+            <div class="sqm-row">
+              <label class="sqm-input-box"><input id="sqm-input" type="number" min="10" max="260" step="5" placeholder="不限"><span>㎡</span></label>
+              <div class="sqm-chips" id="sqm-chips">
+                <button type="button" data-sqm-quick="0">单价</button>
+                <button type="button" data-sqm-quick="25">25㎡</button>
+                <button type="button" data-sqm-quick="35">35㎡</button>
+                <button type="button" data-sqm-quick="50">50㎡</button>
+                <button type="button" data-sqm-quick="70">70㎡</button>
               </div>
-            </label>
-          </div>
-          <label class="f-check"><input id="verified-only" type="checkbox"> 仅看含实采/官方保租的板块</label>
-          <label class="f-check"><input id="opp-only" type="checkbox"> 只看有议价信号板块</label>
-          <div class="f-row">
-            <span class="f-label">适配权重</span>
-            <div class="weight-grid">
-              <label>通勤<select data-weight="commute"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
-              <label>租金<select data-weight="rent"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
-              <label>环境<select data-weight="environment"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
-              <label>便利<select data-weight="convenience"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
             </div>
+          </div>
+
+          <div class="f-row">
+            <label class="f-col"><span>月租预算上限（元）</span><input id="budget-input" type="number" min="500" max="100000" step="100" placeholder="不限，填后自动过滤超预算片区"></label>
+          </div>
+
+          <div class="f-divider"></div>
+
+          <div class="f-row-2">
+            <label class="f-col"><span>备选工作地（兼顾下一份）</span><input id="work2-input" type="text" list="dest-options" autocomplete="off" placeholder="选填，如 企鹅岛"></label>
+            <label class="f-col"><span>备选通勤上限(分)</span><input id="limit2-input" type="number" min="10" max="120" step="5" placeholder="不限"></label>
+          </div>
+
+          <div class="f-row">
+            <button type="button" id="macro-toggle-btn" class="pill-btn" style="width:100%;justify-content:center" data-toggle-macro aria-pressed="false">查看全城各区均价总览</button>
           </div>
         </div>
       </div>
@@ -96,9 +84,9 @@
   </div>
 
   <div class="tb-right">
-    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ 清单 <span id="saved-count">0</span></button>
+    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ 看房清单 <span id="saved-count">0</span></button>
     <div class="pop-anchor">
-      <button type="button" id="help-btn" class="icon-btn" title="数据口径与说明" aria-expanded="false">?</button>
+      <button type="button" id="help-btn" class="icon-btn" title="数据说明" aria-expanded="false">?</button>
       <div id="help-pop" class="popover help-pop" hidden></div>
     </div>
   </div>
@@ -106,7 +94,7 @@
 </header>
 
 <main class="stage" id="stage">
-  <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房板块探索地图，可缩放拖动"></svg>
+  <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房片区探索地图，可缩放拖动"></svg>
 
   <div class="hud-top-left">
     <div class="hud-meta">
@@ -116,15 +104,33 @@
     <div id="status-bar" class="hud-toast" role="status" hidden></div>
   </div>
 
-  <!-- 《P 社 / 纪元》零点击悬停结构化属性卡（随鼠标轻浮，零重绘） -->
+  <!-- 零点击悬停片区速览卡（随鼠标轻浮，零重绘） -->
   <div id="hover-card" class="hover-card" hidden aria-hidden="true"></div>
 
   <div class="dock-bottom">
     <div id="sub-pill-row" class="sub-pill-row" hidden></div>
-    <div class="lens-dock" id="lens-dock" role="tablist" aria-label="地图视角">
-      <button type="button" role="tab" data-lens="rent" aria-selected="true">租金</button>
-      <button type="button" role="tab" data-lens="commute" aria-selected="false">通勤</button>
-      <button type="button" role="tab" data-lens="radar" aria-selected="false">议价与溢价</button>
+    <div class="dock-bar">
+      <!-- 1. 房源轨道分离：市场租房（民房/小区/商业公寓） vs 政府保租房 -->
+      <div class="track-seg" id="track-seg" role="group" aria-label="房源类别切换">
+        <button type="button" data-track="market" aria-pressed="true" title="城中村民房、老小区、电梯小区、商业公寓">市场房</button>
+        <button type="button" data-track="affordable" aria-pressed="false" title="政府保障性租赁住房（申请中 / 往期 / 在建）">保租房</button>
+      </div>
+
+      <!-- 2. 数据维度多选开关（市场房：5项可叠加；保租房：自动切为状态筛选+通勤） -->
+      <div class="layer-dock" id="layer-dock" role="group" aria-label="地图数据维度开关（可多选组合）">
+        <button type="button" data-layer="rent" aria-pressed="true"><i class="ld-dot"></i>租金</button>
+        <button type="button" data-layer="commute" aria-pressed="false"><i class="ld-dot"></i>通勤</button>
+        <button type="button" data-layer="trend" aria-pressed="false"><i class="ld-dot"></i>涨跌</button>
+        <button type="button" data-layer="premium" aria-pressed="false"><i class="ld-dot"></i>捡漏/避贵</button>
+        <button type="button" data-layer="density" aria-pressed="false"><i class="ld-dot"></i>人口</button>
+      </div>
+      <div class="layer-dock" id="aff-dock" role="group" aria-label="保租房批次筛选" hidden></div>
+
+      <!-- 3. 地图物体与事件筛选浮层（一键隐藏中立地标/山体/外迁线，或叠加配套/避坑事件） -->
+      <div class="pop-anchor">
+        <button type="button" id="map-filter-btn" class="map-filter-btn" aria-expanded="false">标点与事件 <span id="map-filter-badge" class="mf-badge" hidden></span>▾</button>
+        <div id="map-filter-pop" class="popover map-filter-pop" hidden></div>
+      </div>
     </div>
     <div id="map-legend" class="map-legend"></div>
   </div>
@@ -137,11 +143,7 @@
         <button type="button" data-zoom="out" title="缩小">−</button>
         <button type="button" data-zoom="reset" title="全深圳">⛶</button>
       </div>
-      <div class="overlay-toggles">
-        <button type="button" id="toggle-fac" class="layer-btn" aria-pressed="false" title="叠加核验商场/学校/公园">设施</button>
-        <button type="button" id="toggle-risk" class="layer-btn" aria-pressed="false" title="叠加 6 类公共避坑图标">避坑</button>
-      </div>
-      <button type="button" id="btn-discover" class="btn-discover">✦ 发现下一板块</button>
+      <button type="button" id="btn-discover" class="btn-discover">✦ 推荐下一处</button>
     </div>
   </div>
 

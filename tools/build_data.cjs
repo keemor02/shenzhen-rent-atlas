@@ -24,10 +24,21 @@ const corridor = readJson('sources/v2/corridor-rents.json');
 const geoSpec = readJson('sources/v3/geography.json');
 const plateSpec = readJson('sources/v3/plates.json');
 const publicEvents = readJson('sources/v3/public-events.json').events || [];
+const affSpec = readJson('sources/v3/affordable-housing.json');
+const workplaceSpec = readJson('sources/v3/workplaces.json');
+const streetPopSpec = readJson('sources/v3/street-population.json');
+const multiRentSpec = readJson('sources/v3/multi-source-rents.json');
 const streetFeatures = readJson('sources/fine/streets.geojson').features || [];
+const atlasAsOf = [affSpec.asOf, base.listingCheckedAt, fine.asof]
+  .filter(date => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date))
+  .sort().at(-1) ?? null;
+// The snapshot month may still be in progress. Using source dates keeps builds reproducible.
+const marketSnapshotMonth = atlasAsOf?.slice(0, 7);
 
-// Fix GeoJSON winding for d3-geo containment tests
+// Fix GeoJSON winding for d3-geo containment tests & compute exact spherical land area (km²) per street!
+const EARTH_R_KM = 6371.0088;
 const featureById = new Map();
+const streetAreaById = new Map();
 for (const feat of streetFeatures) {
   const polys = feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates : [feat.geometry.coordinates];
   for (const rings of polys) {
@@ -36,6 +47,30 @@ for (const feat of streetFeatures) {
     }
   }
   featureById.set(feat.properties.id, feat);
+  streetAreaById.set(feat.properties.id, Number((geoArea(feat) * EARTH_R_KM * EARTH_R_KM).toFixed(2)));
+}
+
+// Verify 74-street 7th National Census populations sum to 100% of every district's official total (0-person diff)
+const streetCensusById = new Map();
+const distCensusCheck = new Map();
+for (const st of fine.streets) {
+  const key = `${st.d}|${st.n}`;
+  const pop = streetPopSpec.streets[key];
+  if (!Number.isFinite(pop) || pop <= 0) {
+    throw new Error(`Missing 7th census population for street: ${key}`);
+  }
+  const areaKm2 = streetAreaById.get(st.id);
+  if (!Number.isFinite(areaKm2) || areaKm2 <= 0) {
+    throw new Error(`Missing GeoJSON area for street: ${st.id}`);
+  }
+  streetCensusById.set(st.id, { pop, areaKm2, density: Math.round(pop / areaKm2) });
+  distCensusCheck.set(st.d, (distCensusCheck.get(st.d) || 0) + pop);
+}
+for (const [dName, expected] of Object.entries(streetPopSpec.districtTotals || {})) {
+  const actual = distCensusCheck.get(dName) || 0;
+  if (actual !== expected) {
+    throw new Error(`7th census total mismatch for ${dName}: got ${actual}, expected ${expected}`);
+  }
 }
 
 // Exact Mercator matching data/base.json
@@ -138,14 +173,16 @@ function inferHousingType(hood, metricRooms = '') {
 
 function latest58(market, room) {
   const months = market?.months || {};
-  const periods = Object.keys(months).sort().reverse();
-  const pick = periods.find(p => p < '2026-11' && months[p]?.[room]?.price > 0) || periods.find(p => months[p]?.[room]?.price > 0);
+  const periods = Object.keys(months).filter(period => months[period]?.[room]?.price > 0).sort().reverse();
+  const pick = periods.find(period => period < marketSnapshotMonth) || periods[0];
   if (!pick) return null;
   const row = months[pick][room];
-  const prev = periods[periods.indexOf(pick) + 1];
-  const prevRow = prev ? months[prev]?.[room] : null;
-  const mom = prevRow?.price > 0 && pick < '2026-11' ? Math.round((row.price / prevRow.price - 1) * 10000) / 100 : null;
-  return { period: pick, price: row.price, yoy: row.yoy ?? null, mom, complete: pick < '2026-11' };
+  const complete = pick < marketSnapshotMonth;
+  const [year, month] = pick.split('-').map(Number);
+  const prev = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`;
+  const prevRow = months[prev]?.[room];
+  const mom = complete && prevRow?.price > 0 ? Math.round((row.price / prevRow.price - 1) * 10000) / 100 : null;
+  return { period: pick, price: row.price, yoy: row.yoy ?? null, mom, complete };
 }
 
 function findBandForHood(hood) {
@@ -516,12 +553,36 @@ for (const [stName, , , ll] of base.stations) {
   if (plateStations.has(pid)) plateStations.get(pid).add(stName);
 }
 
-const landmarks = geoSpec.landmarks.map(l => ({ ...l, xy: project(l.coord) }));
+const baseLandmarks = geoSpec.landmarks.map(l => ({ ...l, xy: project(l.coord) }));
+const extraLandmarks = (workplaceSpec.items || [])
+  .filter(w => w.landmarkTier)
+  .map(w => ({
+    id: w.id, name: w.name, label: w.label || w.name,
+    kind: w.kind === '知名商圈' ? 'mall' : (w.kind === '口岸枢纽' ? 'transit' : 'hub'),
+    tier: w.landmarkTier, coord: w.coord, district: w.district, note: w.note,
+    xy: project(w.coord),
+  }));
+const landmarks = [...baseLandmarks, ...extraLandmarks];
 const mallLandmarks = landmarks.filter(l => l.kind === 'mall');
+
+// Cross-check every workplace coordinate against its real GCJ-02 adjacent metro station (<= 2.8km)
+for (const w of workplaceSpec.items || []) {
+  const stLL = stationCoords.get(w.station);
+  if (!stLL) throw new Error(`Unknown anchor station for workplace ${w.name}: ${w.station}`);
+  const d = meter(w.coord, stLL);
+  if (d > 2800) throw new Error(`Workplace ${w.name} coord drifted ${Math.round(d)}m from station ${w.station}`);
+}
+
+const REAL_ESTATE_KINDS = new Set(['住宅小区', '城中村', '实采项目', '官方保租房']);
 
 for (const pl of plates) {
   const members = places.filter(p => p.plateId === pl.id);
-  const namedPlaces = members.filter(p => !p.isMarketProxy);
+  // 仅保留真实有租金数据的小区/村落/保租项目，剔除历史事件空锚点（如 企鹅岛/桂湾/原办公点/上屋 等伪小区）
+  const namedPlaces = members.filter(p =>
+    !p.isMarketProxy &&
+    p.rents?.length > 0 &&
+    (REAL_ESTATE_KINDS.has(p.kind) || p.id === 'v2-baishizhou')
+  );
   const street = streetById.get(pl.streetId);
   const distInfo = distInfoByName.get(pl.district);
 
@@ -539,7 +600,7 @@ for (const pl of plates) {
 
   // Honest 元/㎡·月 calculation (NO made-up fake multipliers!):
   const sampleUnits = [];
-  for (const m of namedPlaces) {
+  for (const m of members.filter(p => !p.isMarketProxy)) {
     for (const r of m.rents) {
       if (r.unitPrice > 0 && r.grain !== 'official_affordable') sampleUnits.push(r.unitPrice);
     }
@@ -550,13 +611,13 @@ for (const pl of plates) {
   let unitPrice = null, unitBasis = '';
   if (sampleMedianUnit && (pl.clipId || !pl.refUnit)) {
     unitPrice = sampleMedianUnit;
-    unitBasis = '板块实采/参考带换算';
+    unitBasis = '片区挂牌/行情换算';
   } else if (pl.refUnit) {
     unitPrice = pl.refUnit;
-    unitBasis = '官方街道参考单价';
+    unitBasis = '政府街道参考价';
   } else if (sampleMedianUnit) {
     unitPrice = sampleMedianUnit;
-    unitBasis = '板块实采/参考带换算';
+    unitBasis = '片区挂牌/行情换算';
   } else if (distInfo?.community?.price) {
     unitPrice = distInfo.community.price;
     unitBasis = `${pl.district}小区均价`;
@@ -608,6 +669,12 @@ for (const pl of plates) {
     }).map(e => e.id),
   ])];
 
+  const stCensus = streetCensusById.get(pl.streetId) || null;
+  const multiMatch = (multiRentSpec.entries || []).find(e => e.plateId === pl.id);
+  pl.streetPop = stCensus?.pop ?? null;
+  pl.streetAreaKm2 = stCensus?.areaKm2 ?? null;
+  pl.streetDensity = stCensus?.density ?? null;
+  pl.multiSourceRents = multiMatch ? multiMatch.items : [];
   pl.unitPrice = unitPrice;
   pl.unitBasis = unitBasis;
   pl.verifiedUnit = sampleMedianUnit;
@@ -644,27 +711,53 @@ const migrations = [
   return a && b ? { ...m, fromXy: a.xy, toXy: b.xy } : null;
 }).filter(Boolean);
 
-// 7. Unified 500+ Destination Directory: Landmarks + Metro Stations + Bus Hubs + Plates + Estates + Facilities
+// 6.5 Verified affordable rental housing projects (existing + upcoming supply)
+const plateIdSet = new Set(plates.map(p => p.id));
+const affordableProjects = (affSpec.projects || []).map(pr => {
+  const xy = project(pr.coord);
+  let plateId = pr.plateId;
+  if (!plateIdSet.has(plateId)) {
+    const fallbackStreet = pr.plateId.startsWith('st-') ? pr.plateId.slice(3) : (fine.stStreet[pr.station] || '');
+    if (fallbackStreet) plateId = resolvePlateId(fallbackStreet, xy, pr.station);
+  }
+  return { ...pr, plateId, xy };
+});
+const affByPlate = new Map();
+for (const pr of affordableProjects) {
+  if (!affByPlate.has(pr.plateId)) affByPlate.set(pr.plateId, []);
+  affByPlate.get(pr.plateId).push(pr.id);
+}
+for (const pl of plates) {
+  pl.affordableIds = affByPlate.get(pl.id) || [];
+}
+
+// 7. Unified 600+ Destination Directory: Workplaces + Landmarks + Metro Stations + Bus Hubs + Plates + Estates + Facilities
 const destMap = new Map();
-function addDest(name, kind, coord, district = '', extraId = '') {
+function addDest(name, kind, coord, district = '', extraId = '', aliases = [], note = '') {
   if (!name || !Array.isArray(coord) || coord.length < 2) return;
   if (destMap.has(name)) return;
-  destMap.set(name, { name, kind, coord: [Number(coord[0].toFixed(5)), Number(coord[1].toFixed(5))], district, refId: extraId });
+  const entry = { name, kind, coord: [Number(coord[0].toFixed(5)), Number(coord[1].toFixed(5))], district, refId: extraId };
+  if (aliases?.length) entry.aliases = aliases;
+  if (note) entry.note = note;
+  destMap.set(name, entry);
 }
-for (const l of landmarks) addDest(l.name, l.kind === 'hub' ? '办公园区' : l.kind === 'mall' ? '知名商圈' : '交通枢纽', l.coord, l.district, l.id);
+for (const l of baseLandmarks) addDest(l.name, l.kind === 'hub' ? '办公园区' : l.kind === 'mall' ? '知名商圈' : '交通枢纽', l.coord, l.district, l.id, [], l.note);
+for (const w of workplaceSpec.items || []) addDest(w.name, w.kind, w.coord, w.district, w.id, w.aliases || [], w.note || '');
 for (const n of journey.nodes || []) addDest(n.name, n.kind || '站点', n.coord, '', '');
-for (const pl of plates) addDest(pl.name + '板块', '居住板块', pl.coord, pl.district, pl.id);
+for (const pl of plates) addDest(pl.name + '板块', '居住片区', pl.coord, pl.district, pl.id);
+for (const pr of affordableProjects) addDest(pr.name, '保租房项目', pr.coord, pr.district, pr.id);
 for (const p of places) {
   if (!p.isMarketProxy) addDest(p.shortName, p.kind || '小区/村', p.coord, p.district, p.id);
 }
 for (const f of facilities) {
-  if (f.location?.gcj02) addDest(f.name, f.category === 'mall' ? '商场' : f.category === 'school' ? '学校' : '设施', f.location.gcj02, '', f.id);
+  if (f.location?.gcj02) addDest(f.name, f.category === 'mall' ? '商场' : f.category === 'school' ? '学校' : '配套', f.location.gcj02, '', f.id);
 }
 const destinations = [...destMap.values()];
 
 const atlasV3 = {
   version: 3,
-  asOf: '2026-11-25',
+  asOf: atlasAsOf,
+  listingMonth: base.listingMonth ?? null,
   housingTypeMeta: corridor.housingTypeMeta,
   refSource: fine.refSource,
   districts,
@@ -677,6 +770,8 @@ const atlasV3 = {
   events,
   migrations,
   publicEvents,
+  affordableCityPlan: affSpec.cityPlan || null,
+  affordableProjects,
   facilities,
   policies: policiesData.policies || [],
   destinations,

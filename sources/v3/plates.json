@@ -1,6 +1,6 @@
 {
   "asOf": "2026-11-25",
-  "note": "将深圳 15 个核心大街道按真实居住板块与地铁站锚点无缝切分为严丝合缝的拼图板块，其余 59 个街道天然对应单板块（共 98 块全城无缝拼图）",
+  "note": "将深圳 30 个核心与超大行政街道按真实居住片区与地铁站锚点无缝切分为严丝合缝的拼图，其余 44 个紧凑街道对应单片区（共 118 块全城无缝拼图）",
   "splits": [
     {
       "streetId": "440306018000",
@@ -129,6 +129,130 @@
       "plates": [
         { "id": "p-hourui", "name": "后瑞·黄田", "anchor": "后瑞", "unitAdj": 0.96, "tag": "近机场1号线站口" },
         { "id": "p-zhongwu", "name": "钟屋·草围", "anchor": "钟屋南", "unitAdj": 1.02, "tag": "12号线直达南山宝安" }
+      ]
+    },
+    {
+      "streetId": "440306026000",
+      "streetName": "石岩街道",
+      "plates": [
+        { "id": "p-yingrenshi", "name": "应人石", "anchor": "应人石", "unitAdj": 1.04, "tag": "13号线入南山首站·紧邻白芒与西丽" },
+        { "id": "p-luozu", "name": "罗租", "anchor": "罗租", "unitAdj": 0.96, "tag": "13号线成熟城中村与产业生活带" },
+        { "id": "p-shiyancenter", "name": "石岩中心·上屋", "anchor": "上屋", "unitAdj": 1.04, "tag": "6/13号线换乘枢纽·星城商圈核心" },
+        { "id": "p-guantian", "name": "官田·水田", "anchor": "官田", "unitAdj": 0.94, "tag": "6号线东段低门槛住区·近阳台山北" }
+      ]
+    },
+    {
+      "streetId": "440305003000",
+      "streetName": "沙河街道",
+      "plates": [
+        { "id": "p-baishizhou", "name": "白石洲", "anchor": "白石洲", "unitAdj": 0.78, "tag": "1号线高性价比过渡住区·紧邻科技园" },
+        { "id": "p-oct", "name": "华侨城·侨城北", "anchor": "侨城北", "unitAdj": 1.12, "tag": "低密度人文生态老牌品质住区" },
+        { "id": "p-hongshuwan", "name": "红树湾·深湾", "anchor": "红树湾南", "unitAdj": 1.24, "tag": "深超总周边滨海高端次新带" }
+      ]
+    },
+    {
+      "streetId": "440305001000",
+      "streetName": "南头街道",
+      "plates": [
+        { "id": "p-taoyuandaxin", "name": "桃园·大新", "anchor": "大新", "unitAdj": 1.02, "tag": "1/12号线深大旁成熟小区与城中村" },
+        { "id": "p-nantougucheng", "name": "南头古城·中山公园", "anchor": "中山公园", "unitAdj": 0.96, "tag": "12号线古城文创生活圈·公园配套全" }
+      ]
+    },
+    {
+      "streetId": "440306022000",
+      "streetName": "沙井街道",
+      "plates": [
+        { "id": "p-shajingcenter", "name": "沙井中心", "anchor": "沙井", "unitAdj": 1.06, "tag": "11号线京基百纳商圈主力居住带" },
+        { "id": "p-houting", "name": "后亭·步涌", "anchor": "后亭", "unitAdj": 0.92, "tag": "11号线北段低门槛刚需片区" },
+        { "id": "p-maanshan", "name": "马安山·海上田园", "anchor": "马安山", "unitAdj": 0.98, "tag": "11/12/20号线片区·近会展城西翼" }
+      ]
+    },
+    {
+      "streetId": "440306021000",
+      "streetName": "福海街道",
+      "plates": [
+        { "id": "p-qiaotou", "name": "桥头·福永西", "anchor": "桥头", "unitAdj": 0.96, "tag": "11号线成熟商住与老镇生活圈" },
+        { "id": "p-guozhan", "name": "国际会展城", "anchor": "国展", "unitAdj": 1.08, "tag": "12/20号线会展新城次新公寓带" }
+      ]
+    },
+    {
+      "streetId": "440304007000",
+      "streetName": "梅林街道",
+      "plates": [
+        { "id": "p-shangmeilin", "name": "上梅林·卓悦汇", "anchor": "上梅林", "unitAdj": 1.05, "tag": "4/9号线换乘·梅林商业与办公核心" },
+        { "id": "p-xiameilin", "name": "下梅林·梅景", "anchor": "下梅林", "unitAdj": 0.94, "tag": "9号线安静成熟老小区与城中村" }
+      ]
+    },
+    {
+      "streetId": "440304006000",
+      "streetName": "香蜜湖街道",
+      "plates": [
+        { "id": "p-xiangmihu", "name": "香蜜湖·农林", "anchor": "香蜜", "unitAdj": 1.06, "tag": "福田核心成熟花园与高档社区" },
+        { "id": "p-antuoshan", "name": "安托山·侨香", "anchor": "安托山", "unitAdj": 0.94, "tag": "2/7号线换乘·近山景次新带" }
+      ]
+    },
+    {
+      "streetId": "440309004000",
+      "streetName": "大浪街道",
+      "plates": [
+        { "id": "p-longsheng", "name": "龙胜·元芬", "anchor": "龙胜", "unitAdj": 1.05, "tag": "4/6号线交汇·近红山与青年社区" },
+        { "id": "p-yangtaishan", "name": "阳台山东·大浪", "anchor": "阳台山东", "unitAdj": 0.94, "tag": "6号线大浪商业中心与时尚小镇" }
+      ]
+    },
+    {
+      "streetId": "440307014000",
+      "streetName": "布吉街道",
+      "plates": [
+        { "id": "p-bujicenter", "name": "布吉·百鸽笼", "anchor": "布吉", "unitAdj": 1.03, "tag": "3/5/14号线三线枢纽·进关大站" },
+        { "id": "p-dafen", "name": "大芬·木棉湾", "anchor": "大芬", "unitAdj": 0.96, "tag": "3号线油画村与成熟刚需社区" }
+      ]
+    },
+    {
+      "streetId": "440307018000",
+      "streetName": "吉华街道",
+      "plates": [
+        { "id": "p-shuijing", "name": "水径", "anchor": "下水径", "unitAdj": 1.02, "tag": "5号线靠布吉成熟居住带" },
+        { "id": "p-gankeng", "name": "甘坑·凉帽山", "anchor": "凉帽山", "unitAdj": 0.95, "tag": "10号线甘坑古镇与电商产业园周边" }
+      ]
+    },
+    {
+      "streetId": "440307003000",
+      "streetName": "平湖街道",
+      "plates": [
+        { "id": "p-pinghucenter", "name": "平湖中心", "anchor": "平湖", "unitAdj": 1.04, "tag": "10号线/城际枢纽成熟城镇生活圈" },
+        { "id": "p-huanancheng", "name": "华南城·禾花", "anchor": "华南城", "unitAdj": 0.93, "tag": "10号线跨境电商仓储与低租金带" }
+      ]
+    },
+    {
+      "streetId": "440307017000",
+      "streetName": "横岗街道",
+      "plates": [
+        { "id": "p-liuyue", "name": "六约·塘坑", "anchor": "六约", "unitAdj": 0.96, "tag": "3号线靠布吉南段低门槛住区" },
+        { "id": "p-henggangcenter", "name": "横岗中心·四联", "anchor": "横岗", "unitAdj": 1.03, "tag": "3/14号线四联换乘成熟生活圈" }
+      ]
+    },
+    {
+      "streetId": "440307016000",
+      "streetName": "龙岗街道",
+      "plates": [
+        { "id": "p-nanlian", "name": "南联·龙城广场", "anchor": "南联", "unitAdj": 1.04, "tag": "3号线龙岗老城商业核心生活区" },
+        { "id": "p-shuanglong", "name": "双龙·新生", "anchor": "双龙", "unitAdj": 0.94, "tag": "3/16号线换乘·东部低成本片区" }
+      ]
+    },
+    {
+      "streetId": "440311001000",
+      "streetName": "光明街道",
+      "plates": [
+        { "id": "p-fenghuangcheng", "name": "凤凰城", "anchor": "凤凰城", "unitAdj": 1.08, "tag": "6/13号线光明核心商圈与次新大盘" },
+        { "id": "p-guangmingdajie", "name": "光明大街·虹桥", "anchor": "光明大街", "unitAdj": 0.94, "tag": "6号线老城生活圈与虹桥公园" }
+      ]
+    },
+    {
+      "streetId": "440311004000",
+      "streetName": "凤凰街道",
+      "plates": [
+        { "id": "p-changzhen", "name": "长圳", "anchor": "长圳", "unitAdj": 0.95, "tag": "6号线低门槛刚需与凤凰英荟城" },
+        { "id": "p-guangmingcheng", "name": "光明城", "anchor": "光明城", "unitAdj": 1.05, "tag": "6号线支线/高铁枢纽科创走廊" }
       ]
     }
   ]
