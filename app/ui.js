@@ -26,10 +26,13 @@
 
     const engine = global.createV3Engine(atlas, travel, timing);
     let map, evalResult, microCamera = null;
-    let fitExpanded = false, noteFormOpen = false, riskBarOpen = false;
+    let noteFormOpen = false, roomFormPlateId = '', editingRoomId = '';
     let toastTimer = 0, prevWorkName = '';
     const shortDestName = name => String(name || '').replace(/板块$/, '');
     const isCurDest = (...names) => !!evalResult?.dest1 && names.some(n => n && (evalResult.dest1.name === n || shortDestName(evalResult.dest1.name) === shortDestName(n)));
+    const STAR_LABELS = { light: '采光通风', quiet: '隔音安静', appliance: '水压家电', walk: '步行到站', life: '买菜快递', landlord: '房东靠谱' };
+    const HOUSING_TYPE_OPTS = ['电梯小区', '老小区', '品牌公寓', '城中村'];
+    const profileMeta = id => store.PROFILES.find(p => p.id === id) || { id: 'custom', icon: '🎛️', name: '自定义权重', short: '自定义' };
 
     const store = global.createV3Store(() => refresh());
     const state = store.state;
@@ -40,13 +43,10 @@
       .map(d => `<option value="${esc(d.name)}"></option>`).join('');
 
     $('#help-pop').innerHTML = `
-      <p><strong>数据说明${atlas.asOf ? `（核验至 ${esc(atlas.asOf)}）` : ''}</strong></p>
-      ${atlas.listingMonth ? `<p>各区挂牌租金统计期 ${esc(atlas.listingMonth)}</p>` : ''}
-      <p>• <strong>市场房与保租房独立分开</strong>：左下角可一键切换「市场房」（城中村/老小区/电梯小区/商业公寓）与「保租房」（政府配租现房与规划在建项目）。</p>
-      <p>• <strong>多维度自由叠加</strong>：市场房下「租金 / 通勤 / 涨跌 / 捡漏/避贵 / 人口」可同时多选，打开 2 项以上时可在底部图例左侧随时切换「底色」着色依据。</p>
-      <p>• <strong>平峰 / 早高峰通勤切换</strong>：顶部可切换「早高峰」估算（叠加深圳地铁限流大站排队或进核心区驾车潮汐拥堵，非实时 API）；抽屉内可直接点「高德↗」核对明天 8:30 实测。</p>
-      <p>• <strong>多信源交叉对照</strong>：片区抽屉并列展示万科泊寓、龙湖冠寓、自如、魔方、微棠、贝壳/乐有家、58/安居客及政府保租房，并附一键跳贝壳/自如/乐有家看当日实盘。</p>
-      <p>• 收藏与看房笔记保存在本机浏览器，可在「★ 看房清单」导出 JSON 备份。</p>
+      <p><strong>独立租房评分副驾驶（数据核验至 ${esc(atlas.asOf || '最新')}）</strong></p>
+      <p>• <strong>① 选画像看全城推荐分</strong>：左上角「★ Top 5 推荐」一键切换 均衡/通勤/省钱/品质 权重，117 个片区按 0–100 分动态排序。</p>
+      <p>• <strong>② 实地看房「一房一卡」</strong>：点片区 →「+ 记一套看过的房」，自动算清标价+物业+网费+商水商电+中介摊销后的<strong>真实月全成本</strong>，勾出硬伤自动扣分，并在「★ 看房 PK」横向排名。</p>
+      <p>• <strong>③ 独立中立与合规说明</strong>：本工具仅提供片区级统计参考区间及政府公开数据（七普人口、保租房通告、地铁/配套与环评施工公告），<strong>不展示第三方平台具体挂牌房源、不做中介引流</strong>；你看过的具体房源与评分全部保存在本机浏览器，支持 JSON 备份。</p>
     `;
 
     function closePopovers(exceptId = '') {
@@ -181,13 +181,72 @@
           `<button type="button" data-layer="commute" aria-pressed="${!!L.commute}" class="${state.fillLayer === 'commute' && L.commute ? 'is-fill' : ''}"><i class="ld-dot"></i>叠看通勤</button>`;
       }
       renderMapFilterPanel();
+      renderRankPanel();
+    }
+
+    function renderRankPanel() {
+      const panel = $('#rank-panel');
+      const hidePanel = state.macroOpen || state.housingTrack === 'affordable' || state.watchlistOpen;
+      panel.hidden = hidePanel;
+      if (hidePanel) return;
+
+      const pm = profileMeta(state.profile);
+      const top = evalResult.topPlates || [];
+      const top1Hint = !state.rankOpen && top[0] ? ` · #1 ${top[0].plate.name} ${top[0].fit.total}分` : ` · ${evalResult.eligiblePlates.length}处`;
+      const toggleBtn = $('#rank-toggle-btn');
+      toggleBtn.innerHTML = `★ Top 5 推荐 <span class="rk-tag">${esc(pm.icon + ' ' + pm.short)}</span>${esc(top1Hint)} ${state.rankOpen ? '▴' : '▾'}`;
+      toggleBtn.setAttribute('aria-expanded', String(!!state.rankOpen));
+
+      const body = $('#rank-body');
+      const keepWeightsOpen = !!body.querySelector('.rank-weights')?.open;
+      body.hidden = !state.rankOpen;
+      if (!state.rankOpen) return;
+
+      const nw = engine.normalizedWeights(state.weights);
+      const pct = k => Math.round(nw[k] * 100);
+      const profBtns = store.PROFILES.map(p =>
+        `<button type="button" data-profile="${esc(p.id)}" aria-pressed="${state.profile === p.id}" title="${esc(p.desc)}">${esc(p.icon + p.short)}</button>`
+      ).join('');
+
+      const weightRows = store.WEIGHT_KEYS.map(k =>
+        `<label class="rank-w-row"><span>${esc(engine.FIT_NAMES[k])}</span><input type="range" min="0" max="70" step="5" value="${state.weights[k] ?? 20}" data-weight="${k}"><span>${pct(k)}%</span></label>`
+      ).join('');
+
+      const destTip = !evalResult.dest1
+        ? `<div class="rank-tip"><span>设工作地后按通勤精准重排</span><button type="button" data-prompt-work>设目的地</button></div>`
+        : '';
+
+      const listHtml = top.length
+        ? `<ol class="rank-list">${top.map((r, i) => {
+            const sc = r.fit.total;
+            const scCls = sc >= 72 ? '' : sc >= 60 ? ' mid' : ' low';
+            const numCls = i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '';
+            const priceBit = r.estMonthly ? `约${money(r.estMonthly)}` : `${r.plate.unitPrice}元/㎡`;
+            const isSel = r.plate.id === state.selectedPlateId;
+            return `<li><button type="button" class="${isSel ? 'is-sel' : ''}" data-pick-plate="${esc(r.plate.id)}">
+              <span class="rk-num${numCls}">${i + 1}</span>
+              <span class="rk-info">
+                <span class="rk-name-row"><span class="rk-name">${esc(r.plate.name)}</span><span class="rk-score${scCls}">${r.fit.verified ? '✓' : ''}${sc}分</span></span>
+                <span class="rk-why">${esc([priceBit, r.fit.topReason].filter(Boolean).join(' · '))}</span>
+              </span>
+            </button></li>`;
+          }).join('')}</ol>`
+        : `<p class="sub-note" style="color:#a4c6be;margin:4px 0">当前筛选下暂无符合条件的片区，请放宽预算或通勤上限。</p>`;
+
+      body.innerHTML = `
+        <div class="rank-profiles" role="group" aria-label="找房偏好画像">${profBtns}</div>
+        <details class="rank-weights"${keepWeightsOpen ? ' open' : ''}><summary><span>微调权重（符合 ${evalResult.eligiblePlates.length} 处）</span><span>通勤${pct('commute')}% · 租金${pct('rent')}% ▾</span></summary><div class="rank-w-grid">${weightRows}</div></details>
+        ${destTip}${listHtml}
+      `;
     }
 
     function renderMapFilterPanel() {
       const L = state.layers || {};
+      const isAff = state.housingTrack === 'affordable';
       const mf = state.mapFilter || { hub: true, mall: true, transit: true, terrain: true, neutralEvents: true, majorAlerts: true };
       const hiddenCount = ['hub', 'mall', 'transit', 'terrain', 'neutralEvents', 'majorAlerts'].filter(k => mf[k] === false).length;
-      const overlayCount = (L.facilities ? 1 : 0) + (L.risks ? 1 : 0);
+      const extraDataCount = isAff ? 0 : ['trend', 'premium', 'density'].filter(k => L[k]).length;
+      const overlayCount = (L.facilities ? 1 : 0) + (L.risks ? 1 : 0) + extraDataCount;
       const badge = $('#map-filter-badge');
       const btn = $('#map-filter-btn');
       if (hiddenCount === 6 && !overlayCount) {
@@ -196,8 +255,8 @@
         btn.classList.add('active');
       } else if (hiddenCount || overlayCount) {
         const parts = [];
-        if (hiddenCount) parts.push(`藏${hiddenCount}`);
         if (overlayCount) parts.push(`+${overlayCount}`);
+        if (hiddenCount) parts.push(`藏${hiddenCount}`);
         badge.textContent = parts.join(' ');
         badge.hidden = false;
         btn.classList.add('active');
@@ -215,30 +274,42 @@
           Object.entries(evIcons.EVENT_TYPES).map(([k, info]) => `<button type="button" data-risk-filter="${k}" aria-pressed="${state.riskFilter === k}">${evIcons.eventIconSvg(k)}${esc(info.label)}</button>`).join('') + `</div>`
         : '';
 
+      const extraDataSec = !isAff
+        ? `<div class="mf-sec">
+            <div class="mf-sec-title"><span>进阶数据叠加</span><span>可多选组合</span></div>
+            <div class="mf-chips">
+              <button type="button" class="mf-chip" data-layer="trend" aria-pressed="${!!L.trend}">租金涨跌</button>
+              <button type="button" class="mf-chip" data-layer="premium" aria-pressed="${!!L.premium}">捡漏 / 高溢价</button>
+              <button type="button" class="mf-chip" data-layer="density" aria-pressed="${!!L.density}">街道人口密度</button>
+            </div>
+          </div>`
+        : '';
+
       $('#map-filter-pop').innerHTML = `
         <div class="mf-head">
-          <strong>地图标点与事件筛选</strong>
+          <strong>数据叠加与地图筛选</strong>
           <div class="mf-presets">
             <button type="button" data-map-preset="minimal">极简只看片区</button>
             <button type="button" data-map-preset="default">恢复默认</button>
           </div>
         </div>
+        ${extraDataSec}
         <div class="mf-sec">
-          <div class="mf-sec-title"><span>地图物体（中立参照）</span><span>点击开关</span></div>
+          <div class="mf-sec-title"><span>地图参照物</span><span>点击开关</span></div>
           <div class="mf-chips">
             <button type="button" class="mf-chip" data-map-filter="hub" aria-pressed="${mf.hub !== false}">◆ 办公园区</button>
             <button type="button" class="mf-chip" data-map-filter="mall" aria-pressed="${mf.mall !== false}">◆ 商圈商场</button>
             <button type="button" class="mf-chip" data-map-filter="transit" aria-pressed="${mf.transit !== false}">◆ 交通枢纽</button>
-            <button type="button" class="mf-chip" data-map-filter="terrain" aria-pressed="${mf.terrain !== false}">山体与水库</button>
+            <button type="button" class="mf-chip" data-map-filter="terrain" aria-pressed="${mf.terrain !== false}">山体水库</button>
           </div>
         </div>
         <div class="mf-sec">
-          <div class="mf-sec-title"><span>地图事件（按性质筛选）</span><span>异动 / 中立 / 利好 / 避坑</span></div>
+          <div class="mf-sec-title"><span>提醒与配套点位</span></div>
           <div class="mf-chips">
-            <button type="button" class="mf-chip is-risk" data-map-filter="majorAlerts" aria-pressed="${mf.majorAlerts !== false}">! 重要异动提醒</button>
-            <button type="button" class="mf-chip" data-map-filter="neutralEvents" aria-pressed="${mf.neutralEvents !== false}">中立外迁与参照线</button>
-            <button type="button" class="mf-chip" data-layer="facilities" aria-pressed="${!!L.facilities}">利好配套点位</button>
-            <button type="button" class="mf-chip is-risk" data-layer="risks" aria-pressed="${!!L.risks}">避坑警示事件</button>
+            <button type="button" class="mf-chip is-risk" data-map-filter="majorAlerts" aria-pressed="${mf.majorAlerts !== false}">! 价格异动</button>
+            <button type="button" class="mf-chip" data-map-filter="neutralEvents" aria-pressed="${mf.neutralEvents !== false}">外迁参照线</button>
+            <button type="button" class="mf-chip" data-layer="facilities" aria-pressed="${!!L.facilities}">利好配套</button>
+            <button type="button" class="mf-chip is-risk" data-layer="risks" aria-pressed="${!!L.risks}">避坑提醒</button>
           </div>
           ${facSub}${riskSub}
         </div>
@@ -293,17 +364,105 @@
       if (row.premium?.status === 'premium') sigHtml = `<span class="sig-pill sig-prem">↑ 高溢价 ¥${Math.round(row.premium.extra)}/月</span>`;
       else if (row.arbitrage.status === 'opportunity') sigHtml = `<span class="sig-pill sig-opp">↘ 可捡漏</span>`;
       else if (row.premium?.status === 'direct') sigHtml = `<span class="sig-pill sig-walk">◆ 步行可达</span>`;
-      if (row.mastery?.visited) sigHtml += `<span class="sig-pill sig-opp">✓ 已看房${row.mastery.avgStar ? ' ' + row.mastery.avgStar + '★' : ''}</span>`;
+      if (row.mastery?.visited) sigHtml += `<span class="sig-pill sig-opp">✓ 已看房${row.mastery.roomCount ? ' ' + row.mastery.roomCount + '套' : ''}${row.mastery.avgStar ? ' ' + row.mastery.avgStar + '★' : ''}</span>`;
 
-      // 仅在至少有 2 个真实维度可计分时才展示匹配度，避免「14–89分」这类过宽的无意义区间
-      const fitBadge = row.fit.count >= 2
-        ? `<button type="button" class="fit-pill${row.fit.premiumPenalty ? ' has-pen' : ''}" data-toggle-fit title="查看四项评分明细">匹配度 ${esc(row.fit.rangeText)}${row.fit.premiumPenalty ? ' (−' + row.fit.premiumPenalty + ')' : ''}</button>`
-        : '';
-      const fitBreakdown = fitExpanded && row.fit.count
-        ? `<div class="fit-detail-box"><strong>匹配度拆解</strong><ul>${engine.FIT_KEYS.map(k => {
+      // V6 极简四维 2×2 评分卡（高度减半，视觉呼吸感大幅提升）
+      const pm = profileMeta(state.profile);
+      const rankPos = evalResult.topRankById?.get(pl.id) || 0;
+      const scCls = sc => sc >= 72 ? '' : sc >= 60 ? ' mid' : ' low';
+      const shortWhy = d => String(d.why || '').replace(/^预估 · /, '').split(' · ').slice(0, 2).join(' · ');
+      const scoreCardHtml = `<div class="score-card">
+        <div class="score-grid-4">${engine.FIT_KEYS.map(k => {
           const d = row.fit.dimensions[k];
-          return `<li>${esc(engine.FIT_NAMES[k])}：<strong>${d.score == null ? '待看房' : Math.round(d.score) + '分'}</strong> · ${esc(d.why)}</li>`;
-        }).join('')}</ul></div>`
+          return `<div class="score-cell">
+            <div class="score-cell-top"><span>${esc(engine.FIT_NAMES[k])}</span><strong>${d.score}分</strong></div>
+            <div class="score-track"><div class="score-fill${scCls(d.score)}" style="width:${d.score}%"></div></div>
+            <div class="score-cell-why" title="${esc(d.why)}">${esc(shortWhy(d))}</div>
+          </div>`;
+        }).join('')}</div>
+      </div>`;
+
+      // V5 片区内「一房一卡」实看表单（支持新增与编辑，实时计算真实月全成本 + 红灯硬伤扣分）
+      const editingRoom = editingRoomId ? store.getRoom(editingRoomId) : null;
+      const showRoomForm = roomFormPlateId === pl.id;
+      let roomFormHtml = '';
+      if (showRoomForm) {
+        const rm = editingRoom && editingRoom.plateId === pl.id ? editingRoom : null;
+        const starSel = (k, val) => `<label>${esc(STAR_LABELS[k])}<select name="star_${k}"><option value="">未评</option>${[5, 4, 3, 2, 1].map(n => `<option value="${n}"${val === n ? ' selected' : ''}>${n}★</option>`).join('')}</select></label>`;
+        const initBase = rm?.rent || (row.estMonthly || (pl.unitPrice ? pl.unitPrice * 35 : 2500));
+        const initUtilMode = rm?.utilityMode || 'civil';
+        const initUtilExtra = initUtilMode === 'commercial' ? 220 : (initUtilMode === 'custom' ? (rm?.utilityExtra || 0) : 0);
+        const initHidden = (rm?.mgmtFee || 0) + (rm?.netFee || 0) + initUtilExtra + Math.round((rm?.agencyFee || 0) / 12);
+        const initTrue = initBase + initHidden;
+        roomFormHtml = `<form class="room-form" data-room-form data-plate-id="${esc(pl.id)}" data-plate-name="${esc(pl.name)}" data-room-id="${esc(rm?.id || '')}">
+          <h4><span>${rm ? '编辑看房卡片' : '记一套看过的房（一房一卡）'}</span><button type="button" class="link-btn" data-cancel-room-form>收起</button></h4>
+          <label>小区 / 楼栋房号 *<input name="title" type="text" required value="${esc(rm?.title || '')}" placeholder="例：${esc(pl.name)}花园 3栋802 / B栋503"></label>
+          <div class="rf-grid-3">
+            <label>房源类型<select name="housingType">${HOUSING_TYPE_OPTS.map(t => `<option value="${esc(t)}"${(rm?.housingType || '电梯小区') === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+            <label>面积(㎡)<input name="areaSqm" type="number" min="5" max="300" step="1" value="${rm?.areaSqm ?? (state.sqm || '')}" placeholder="如 35"></label>
+            <label>步行到站(分)<input name="walkMin" type="number" min="1" max="60" step="1" value="${rm?.walkMin ?? ''}" placeholder="选填"></label>
+          </div>
+          <div class="rf-grid-2">
+            <label>标价月租(元) *<input name="rent" type="number" min="100" max="100000" step="50" required value="${rm?.rent ?? initBase}" placeholder="月租标价"></label>
+            <label>物业/管理/服务费(元/月)<input name="mgmtFee" type="number" min="0" max="10000" step="10" value="${rm?.mgmtFee ?? 0}" placeholder="0"></label>
+          </div>
+          <div class="rf-grid-2">
+            <label>网费/垃圾费等(元/月)<input name="netFee" type="number" min="0" max="2000" step="10" value="${rm?.netFee ?? 0}" placeholder="0"></label>
+            <label>中介/服务费(一次性元)<input name="agencyFee" type="number" min="0" max="50000" step="100" value="${rm?.agencyFee ?? 0}" placeholder="自动按12个月摊销"></label>
+          </div>
+          <div class="rf-grid-2">
+            <label>水电性质<select name="utilityMode">
+              <option value="civil"${initUtilMode === 'civil' ? ' selected' : ''}>民水民电 (+¥0/月)</option>
+              <option value="commercial"${initUtilMode === 'commercial' ? ' selected' : ''}>商水商电 (自动估 +¥220/月)</option>
+              <option value="custom"${initUtilMode === 'custom' ? ' selected' : ''}>自定义水电差价</option>
+            </select></label>
+            <label data-util-custom-wrap${initUtilMode === 'custom' ? '' : ' hidden'}>水电月均多花(元)<input name="utilityExtra" type="number" min="0" max="3000" step="20" value="${rm?.utilityExtra ?? 200}"></label>
+          </div>
+          <div class="true-cost-preview" data-true-cost-preview>
+            <span>真实月总支出</span>
+            <strong>${money(initTrue)}/月</strong>
+            <span class="sub-note" style="margin:0;width:100%">含隐形杂费 +${money(initHidden)}/月（物业+网费+水电差价+中介费/12）</span>
+          </div>
+          <div>
+            <div class="sub-note" style="margin:0 0 4px;font-weight:650">现场排雷硬伤（每勾选 1 项扣 12 分）</div>
+            <div class="rf-flag-grid">${store.RED_FLAGS.map(f => `<label class="rf-flag-lbl"><input type="checkbox" name="redFlags" value="${esc(f.id)}"${(rm?.redFlags || []).includes(f.id) ? ' checked' : ''}><span>${esc(f.label)}</span></label>`).join('')}</div>
+          </div>
+          <div class="rf-grid-3">${store.STAR_KEYS.map(k => starSel(k, rm?.stars?.[k] ?? null)).join('')}</div>
+          <label>看房备忘（朝向、电梯排队、房东谈价底线…）<textarea name="note" rows="2" placeholder="写下看完房最直观的优缺点，方便晚上横向 PK">${esc(rm?.note || '')}</textarea></label>
+          <div class="drawer-actions" style="margin:0">
+            <button type="submit" class="btn-primary">保存并计分</button>
+            <button type="button" class="btn-ghost" data-cancel-room-form>取消</button>
+          </div>
+        </form>`;
+      }
+
+      // 片区内已看过的具体房源卡片列表
+      const flagLabelById = new Map(store.RED_FLAGS.map(f => [f.id, f.label]));
+      const plateRoomsHtml = row.rooms?.length
+        ? `<div class="sec-head"><h3>我在本片区看过的房 (${row.rooms.length}套)</h3><button type="button" class="link-btn" data-open-pk>去 PK 榜对比 →</button></div>
+          <ul class="room-card-list">${row.rooms.map(rm => {
+            const flagHtml = rm.redFlags.length
+              ? rm.redFlags.map(id => `<span class="flag-pill">⚠ ${esc(flagLabelById.get(id) || id)}</span>`).join('')
+              : `<span class="flag-ok">✓ 零红灯硬伤</span>`;
+            const starBits = store.STAR_KEYS.filter(k => rm.stars?.[k]).map(k => `${STAR_LABELS[k].slice(0, 2)}${rm.stars[k]}★`).join(' · ');
+            return `<li class="room-card-item">
+              <div class="room-card-top">
+                <strong>${esc(rm.title)} <span class="micro-tag">${esc(rm.housingType)}${rm.areaSqm ? ' · ' + rm.areaSqm + '㎡' : ''}</span></strong>
+                <span class="room-score-pill${rm.total < 65 ? ' low' : ''}">${rm.total}分</span>
+              </div>
+              <div class="room-cost-line">真实月全成本 <strong>${money(rm.trueMonthly)}/月</strong>${rm.hiddenMonthly > 0 ? `<span class="room-hidden-tag">比标价多 ${money(rm.hiddenMonthly)}/月</span>` : `<span class="sub-note" style="margin-left:4px">（标价 ${money(rm.baseRent)} · 零杂费）</span>`}</div>
+              <div class="room-flags">${flagHtml}</div>
+              ${starBits ? `<p class="sub-note">${esc(starBits)}</p>` : ''}
+              ${rm.note ? `<p class="sub-note" style="color:var(--fg)">${esc(rm.note)}</p>` : ''}
+              <div class="room-card-foot">
+                <span class="sub-note" style="margin:0">${esc(rm.observed)}</span>
+                <div>
+                  <button type="button" class="btn-ghost" data-edit-room="${esc(rm.id)}" data-plate-id="${esc(pl.id)}">编辑</button>
+                  <button type="button" class="btn-ghost" data-delete-room="${esc(rm.id)}">删除</button>
+                </div>
+              </div>
+            </li>`;
+          }).join('')}</ul>`
         : '';
 
       const deltaHtml = evalResult.refRow && !isRef && row.refDeltas.length
@@ -345,91 +504,103 @@
         </div>`;
       }
 
-      // 捡漏/谈价线索（精简保留）与 折叠版「关联事件与政策」（默认收起，只显示关键词，展开后直接点链接看原文）
+      // 捡漏/谈价线索（精简收纳进折叠区）
       const reasonCard = row.arbitrage.reasons.length
         ? `<div class="alert-card is-opp"><div class="alert-head"><span>↘ 捡漏 / 谈价线索</span></div>${row.arbitrage.reasons.map(r => `<p class="sub-note" style="color:var(--fg)">• ${esc(r)}</p>`).join('')}</div>`
         : '';
       const evPolCount = row.events.length + row.policies.length;
-      let evPolFold = '';
-      if (evPolCount) {
-        const kwPills = [
-          ...row.events.map(ev => ev.signalLabel?.split('·')[0]?.trim() || ev.type),
-          ...row.policies.map(pol => pol.title.replace(/配租|认租|政策/g, '').slice(0, 8)),
-        ].filter(Boolean).slice(0, 2).map(k => `<span class="micro-tag">${esc(k)}</span>`).join('');
-        const foldItems = [
-          ...row.events.map(ev => `<li><span class="fold-main"><strong>${esc(ev.title)}</strong><span class="micro-tag">${esc(ev.date)}</span></span><span class="fold-act">${lnk(ev.source, '原文')}</span></li>`),
-          ...row.policies.map(pol => `<li><span class="fold-main"><strong>${esc(pol.title)}</strong><span class="micro-tag">${esc(pol.status)}</span></span><span class="fold-act">${lnk(pol.source, '公告')}</span></li>`),
-        ].join('');
-        evPolFold = `<details class="drawer-fold">
-          <summary><span class="fold-title">关联事件与政策 (${evPolCount})</span><span class="fold-tags">${kwPills}</span></summary>
-          <ul class="fold-list">${foldItems}</ul>
-        </details>`;
-      }
 
-      // 市场房（民房/老小区/电梯小区/商业公寓）与 政府保租房 严格分开列示！
+      // 仅保留「片区级大类统计参考区间」（去商业平台引流直链 & 去品牌门店具体挂牌报价，彻底消除侵权/导流风险）
       const marketRents = row.rentsMatched.filter(r => r.grain !== 'official_affordable');
       const affRents = row.rentsMatched.filter(r => r.grain === 'official_affordable');
-      const primaryType = marketRents[0]?.type;
-      const utilHint = atlas.housingTypeMeta[primaryType]?.utility?.split('（')[0] || '';
-      const rentHtml = marketRents.length
-        ? `<div class="sec-head"><h3>市场房参考月租（民房 / 小区 / 公寓）</h3>${utilHint ? `<span class="sec-hint">${esc(utilHint)}</span>` : ''}</div>
-          <ul class="rent-list">${marketRents.slice(0, 8).map(r => {
-            const tLabel = atlas.housingTypeMeta[r.type]?.label || '综合';
+      const catBands = [];
+      const seenCat = new Set();
+      for (const r of marketRents) {
+        const key = `${r.type || 'all'}_${r.room}`;
+        if (seenCat.has(key)) continue;
+        seenCat.add(key);
+        catBands.push(r);
+        if (catBands.length >= 4) break;
+      }
+      const rentBandsHtml = catBands.length
+        ? `<ul class="rent-list">${catBands.map(r => {
+            const tLabel = atlas.housingTypeMeta[r.type]?.label || '片区综合';
             const priceStr = r.low === r.high ? money(r.median) : `${money(r.low)}–${money(r.high)}`;
-            const cntTag = r.count > 1 ? ` · ${r.count}条汇总` : '';
-            return `<li><div class="rent-line"><span><strong>${esc(tLabel)} · ${ROOM_LABEL[r.room] || r.room + '室'}</strong><span class="micro-tag">${esc(engine.GRAIN_LABELS[r.grain] || r.grain)}</span></span><span class="rent-price">${esc(priceStr)}</span></div>
-              <p class="sub-note" title="${esc(r.sourceName || '')}">${r.sqm ? `${r.sqm[0]}${r.sqm[1] !== r.sqm[0] ? '–' + r.sqm[1] : ''}㎡ · ` : ''}${esc(r.period)}${cntTag} · ${lnk(r.source, '来源') || esc(r.sourceName)}</p></li>`;
+            return `<li><div class="rent-line"><span><strong>${esc(tLabel)} · ${ROOM_LABEL[r.room] || r.room + '室'}</strong></span><span class="rent-price">${esc(priceStr)}</span></div>
+              <p class="sub-note">${r.sqm ? `${r.sqm[0]}${r.sqm[1] !== r.sqm[0] ? '–' + r.sqm[1] : ''}㎡ · ` : ''}${esc(r.period)} 片区参考区间（非具体挂牌）</p></li>`;
           }).join('')}</ul>`
         : '';
 
-      // 多信源交叉对照（万科泊寓 / 龙湖冠寓 / 自如 / 魔方 / 微棠 / 贝壳·乐有家公开数据）+ 一键核对当日实盘
-      const multiList = pl.multiSourceRents || [];
-      const multiHtml = multiList.length
-        ? `<div class="sec-head"><h3>多平台对照（品牌公寓 / 贝壳·乐有家）</h3><span class="sec-hint">跨平台交叉核价</span></div>
-          <ul class="rent-list">${multiList.map(m => {
-            const priceStr = m.low === m.high ? money(m.median) : `${money(m.low)}–${money(m.high)}`;
-            return `<li><div class="rent-line"><span><strong>${esc(m.store)}</strong><span class="brand-badge">${esc(m.brand)}</span></span><span class="rent-price">${esc(priceStr)}</span></div>
-              <p class="sub-note">${m.sqm ? `${m.sqm[0]}–${m.sqm[1]}㎡ · ` : ''}${ROOM_LABEL[m.room] || m.room + '室'} · ${esc(m.period)} · ${lnk(m.source, m.brand)}</p>
-              <p class="sub-note">${esc(m.utility)}</p></li>`;
-          }).join('')}</ul>`
+      // 折叠组 1：片区行情、议价/溢价与参考区间（默认收起，保持主界面清爽）
+      const marketTags = [];
+      if (row.alerts?.some(a => a.priority >= 2)) marketTags.push(row.alerts[0].short);
+      if (row.premium?.status === 'premium') marketTags.push('高溢价');
+      else if (row.arbitrage.status === 'opportunity') marketTags.push('可捡漏');
+      if (row.trend?.yoy != null) marketTags.push(`同比${row.trend.yoy > 0 ? '+' : ''}${row.trend.yoy}%`);
+      const marketFoldHtml = (majorAlertHtml || premHtml || reasonCard || rentBandsHtml)
+        ? `<details class="drawer-fold">
+            <summary><span class="fold-title">片区行情与参考区间</span><span class="fold-tags">${marketTags.slice(0, 2).map(t => `<span class="micro-tag">${esc(t)}</span>`).join('')}</span></summary>
+            <div class="fold-body">
+              ${majorAlertHtml}${premHtml}${reasonCard}${rentBandsHtml}
+              <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px">
+                <span class="sub-note" style="margin:0">独立统计参考 · 不做中介导流</span>
+                <button type="button" class="btn-ghost" data-toggle-ref="${esc(pl.id)}" aria-pressed="${isRef}">${isRef ? '⇄ 已设为对比' : '⇄ 设为对比片区'}</button>
+              </div>
+            </div>
+          </details>`
         : '';
 
-      const liveKw = pl.name.split('·')[0].replace(/中心$/, '') || pl.streetName.replace(/街道$/, '');
-      const liveEnc = encodeURIComponent(liveKw);
-      const liveLinksHtml = `<div class="sec-head"><h3>去看今日在租实盘（${esc(liveKw)}）</h3><span class="sec-hint">直达官方实盘</span></div>
-        <div class="live-links">
-          <a class="live-link-pill" href="https://sz.zu.ke.com/zufang/rs${liveEnc}/" target="_blank" rel="noopener noreferrer">贝壳找房↗</a>
-          <a class="live-link-pill" href="https://sz.ziroom.com/z/?qwd=${liveEnc}" target="_blank" rel="noopener noreferrer">自如↗</a>
-          <a class="live-link-pill" href="https://shenzhen.leyoujia.com/zf/?n=${liveEnc}" target="_blank" rel="noopener noreferrer">乐有家↗</a>
-          <a class="live-link-pill" href="https://www.inboyu.com/" target="_blank" rel="noopener noreferrer">万科泊寓↗</a>
-        </div>`;
-
-      const marketChildRows = row.childRows.filter(cr => cr.place.kind !== '官方保租房');
-      const estatesHtml = marketChildRows.length
-        ? `<div class="sec-head"><h3>片区内民房、小区与公寓 (${marketChildRows.length})</h3></div>
-          <ul class="estate-list">${marketChildRows.map(cr => {
-            const pTxt = cr.rent ? (cr.rent.low === cr.rent.high ? money(cr.rent.median) : `${money(cr.rent.low)}–${money(cr.rent.high)}`) : '';
-            return `<li><button type="button" data-open-place="${esc(cr.place.id)}">${esc(cr.place.shortName)} <span class="micro-tag">${esc(cr.place.kind)}</span></button><span class="meta">${[pTxt, cr.route ? cr.route.minutes + '分' : ''].filter(Boolean).join(' · ')}</span></li>`;
-          }).join('')}</ul>`
-        : '';
-
+      // 折叠组 2：周边配套、街道人口与避坑提醒（默认收起）
       const nearFacHtml = row.nearbyFacs.length
-        ? `<div class="sec-head"><h3>周边配套</h3></div><ul class="clean-list">${row.nearbyFacs.map(f =>
-          `<li><strong>${esc(f.name)}</strong><span class="micro-tag">${esc(FAC_CAT[f.category] || f.category)} · ${fmtDist(f.meters)}</span> <span class="sub-note">${lnk(f.source, '政府')} ${lnk(f.osmUrl, '地图')}</span></li>`
+        ? `<ul class="clean-list">${row.nearbyFacs.map(f =>
+          `<li><strong>${esc(f.name)}</strong><span class="micro-tag">${esc(FAC_CAT[f.category] || f.category)} · ${fmtDist(f.meters)}</span></li>`
         ).join('')}</ul>`
         : '';
-
       const riskHtml = row.risks.length
-        ? `<div class="sec-head"><h3>周边避坑提醒</h3></div><ul class="clean-list">${row.risks.map(rk => {
+        ? `<div class="sec-head" style="margin-top:8px"><h3>公开避坑提醒</h3></div><ul class="clean-list">${row.risks.map(rk => {
           const rt = evIcons.eventTypeFor(rk);
           return `<li>${evIcons.eventIconSvg(rt)} <strong>${esc(rk.name)}</strong>（${esc(rk.observed)}）<p class="sub-note">${esc(rk.check)} ${lnk(rk.url, rk.source)}</p></li>`;
         }).join('')}</ul>`
+        : '';
+      const envTags = [];
+      if (pl.streetDensity != null) envTags.push(`${(pl.streetDensity / 10000).toFixed(2)}万/km²`);
+      if (row.risks.length) envTags.push(`${row.risks.length}项避坑`);
+      const envCount = row.nearbyFacs.length + row.risks.length;
+      const peakFootnote = row.route?.peakDetail ? `<p class="sub-note" style="color:var(--warm);margin:0 0 6px">⏱ ${esc(row.route.peakDetail)}</p>` : '';
+      const comm2Footnote = evalResult.dest2 && row.route2 ? `<p class="sub-note" style="margin:0 0 6px">备选工作地 ${esc(evalResult.dest2.name)}：<strong>${row.route2.minutes} 分钟</strong></p>` : '';
+      const densityFootnote = pl.streetDensity != null
+        ? `<p class="sub-note" style="margin:0 0 6px">${esc(pl.streetName)}人口密度 ${(pl.streetDensity / 10000).toFixed(2)}万/km²（2020七普 ${(pl.streetPop / 10000).toFixed(1)}万人 / ${pl.streetAreaKm2}km²${(pl.subdivided || pl.clipId) ? ' · 同街道片区共用口径' : ''}）</p>`
+        : '';
+      const envFoldHtml = (envCount || densityFootnote || peakFootnote || comm2Footnote)
+        ? `<details class="drawer-fold">
+            <summary><span class="fold-title">配套、人口与避坑${envCount ? ' (' + envCount + ')' : ''}</span><span class="fold-tags">${envTags.slice(0, 2).map(t => `<span class="micro-tag">${esc(t)}</span>`).join('')}</span></summary>
+            <div class="fold-body">${peakFootnote}${comm2Footnote}${densityFootnote}${nearFacHtml}${riskHtml}</div>
+          </details>`
+        : '';
+
+      // 折叠组 3：政府保租房与公开政策（仅在有数据时显示，默认收起）
+      const affCount = (row.affordable?.length || 0) + affRents.length + evPolCount;
+      const affFoldHtml = affCount
+        ? `<details class="drawer-fold">
+            <summary><span class="fold-title">政府保租房与公开政策 (${affCount})</span><span class="fold-tags">${row.affordable?.length ? `<span class="micro-tag">${row.affordable.length}个保租项目</span>` : ''}</span></summary>
+            <div class="fold-body">
+              ${row.affordable?.length ? `<ul class="estate-list">${row.affordable.map(ar => {
+                const p = ar.project;
+                const pMeta = ar.estMonthly ? `约${money(ar.estMonthly)}/月` : p.unitPrice ? `${p.unitPrice}元/㎡` : p.unitsText;
+                return `<li><button type="button" data-aff="${esc(p.id)}">${esc(p.shortName)} <span class="micro-tag">${esc(p.phaseLabel)}</span></button><span class="meta">${esc(pMeta)}</span></li>`;
+              }).join('')}</ul>` : ''}
+              ${evPolCount ? `<ul class="fold-list" style="padding:0;border:0">${[
+                ...row.events.map(ev => `<li><span class="fold-main"><strong>${esc(ev.title)}</strong><span class="micro-tag">${esc(ev.date)}</span></span><span class="fold-act">${lnk(ev.source, '原文')}</span></li>`),
+                ...row.policies.map(pol => `<li><span class="fold-main"><strong>${esc(pol.title)}</strong><span class="micro-tag">${esc(pol.status)}</span></span><span class="fold-act">${lnk(pol.source, '公告')}</span></li>`),
+              ].join('')}</ul>` : ''}
+            </div>
+          </details>`
         : '';
 
       const starOpts = v => `<option value="">未评</option>` + [1, 2, 3, 4, 5].map(n => `<option value="${n}"${v === n ? ' selected' : ''}>${n}星</option>`).join('');
       const hasNote = !!(entry?.monthly || entry?.environment || entry?.convenience || entry?.note);
       const noteDisplay = hasNote && !noteFormOpen
-        ? `<div class="sec-head"><h3>我的看房笔记</h3><button type="button" class="link-btn" data-toggle-note>编辑</button></div>
+        ? `<div class="sec-head"><h3>旧版看房笔记</h3><button type="button" class="link-btn" data-toggle-note>编辑</button></div>
           <p class="sub-note" style="color:var(--fg)">${[entry.monthly ? '实谈 ' + money(entry.monthly) : '', entry.environment ? '环境' + entry.environment + '星' : '', entry.convenience ? '便利' + entry.convenience + '星' : '', entry.note || ''].filter(Boolean).join(' · ')}</p>`
         : '';
       const noteFormHtml = noteFormOpen
@@ -444,56 +615,46 @@
           </form>`
         : '';
 
-      const commPart = evalResult.dest1
-        ? (row.route ? `<span class="vital-item"><strong>${row.route.minutes}分</strong><small class="sub-note" style="margin:0">${esc(row.route.label)} ${lnk(navUrl, '高德')}</small></span>` : `<span class="vital-item">暂无数据</span>`)
-        : `<span class="vital-item"><button type="button" class="link-btn" data-prompt-work>设目的地算通勤</button></span>`;
-      const peakNote = row.route?.peakDetail ? `<p class="sub-note" style="margin:-4px 0 8px;color:var(--warm)">⏱ ${esc(row.route.peakDetail)}</p>` : '';
-      const comm2Note = evalResult.dest2 && row.route2 ? `<p class="sub-note" style="margin:-4px 0 8px">备选工作地 ${esc(evalResult.dest2.name)}：<strong>${row.route2.minutes} 分钟</strong></p>` : '';
-      const densityNote = pl.streetDensity != null
-        ? `<p class="sub-note" style="margin:-4px 0 8px">${esc(pl.streetName)}人口密度：<strong>${(pl.streetDensity / 10000).toFixed(2)}万/km²</strong>（2020七普常住 ${(pl.streetPop / 10000).toFixed(1)}万人 / 陆地 ${pl.streetAreaKm2}km²${pl.clipId ? ' · 同街道片区共用街道口径' : ''}）</p>`
-        : '';
+      // 简洁双列 KPI（通勤 + 估月租）+ 一行精炼标签条
+      const kpiComm = evalResult.dest1
+        ? (row.route
+            ? `<div class="kpi-card"><div class="kpi-lbl"><span>${state.peak ? '早高峰估时' : '单程通勤'}</span>${lnk(navUrl, '高德')}</div><div class="kpi-val">${row.route.minutes} 分</div><div class="kpi-sub">${esc(row.route.label)}</div></div>`
+            : `<div class="kpi-card"><div class="kpi-lbl"><span>单程通勤</span></div><div class="kpi-val">—</div><div class="kpi-sub">暂无估时</div></div>`)
+        : `<div class="kpi-card"><div class="kpi-lbl"><span>单程通勤</span></div><div class="kpi-val"><button type="button" class="link-btn" style="font-size:14px;font-weight:700" data-prompt-work>设工作地 →</button></div><div class="kpi-sub">${pl.lines?.length ? esc(pl.lines.join('/') + '号线') : '点击测算耗时'}</div></div>`;
+      const kpiRent = row.estMonthly
+        ? `<div class="kpi-card"><div class="kpi-lbl"><span>参考月租</span><span>${state.sqm}㎡</span></div><div class="kpi-val">约 ${money(row.estMonthly)}</div><div class="kpi-sub">${pl.unitPrice}元/㎡ · 片区统计</div></div>`
+        : `<div class="kpi-card"><div class="kpi-lbl"><span>参考均价</span></div><div class="kpi-val">${pl.unitPrice} 元/㎡</div><div class="kpi-sub">${esc(pl.unitBasis)}</div></div>`;
 
-      const affInPlateHtml = (row.affordable?.length || affRents.length)
-        ? `<div class="sec-head"><h3>政府保租房（与市场房分开列示）</h3><button type="button" class="link-btn" data-track="affordable">去保租房专场 →</button></div>` +
-          (row.affordable?.length
-            ? `<ul class="estate-list">${row.affordable.map(ar => {
-                const p = ar.project;
-                const pMeta = ar.estMonthly ? `约${money(ar.estMonthly)}/月` : p.unitPrice ? `${p.unitPrice}元/㎡` : p.unitsText;
-                return `<li><button type="button" data-aff="${esc(p.id)}">${esc(p.shortName)} <span class="micro-tag">${esc(p.phaseLabel)}</span></button><span class="meta">${esc(pMeta)}</span></li>`;
-              }).join('')}</ul>`
-            : '') +
-          (affRents.length
-            ? `<ul class="rent-list">${affRents.slice(0, 4).map(r => {
-                const priceStr = r.low === r.high ? money(r.median) : `${money(r.low)}–${money(r.high)}`;
-                return `<li><div class="rent-line"><span><strong>政府保租房 · ${ROOM_LABEL[r.room] || r.room + '室'}</strong><span class="micro-tag">官方保租</span></span><span class="rent-price">${esc(priceStr)}</span></div>
-                  <p class="sub-note">${r.sqm ? `${r.sqm[0]}${r.sqm[1] !== r.sqm[0] ? '–' + r.sqm[1] : ''}㎡ · ` : ''}${esc(r.period)} · ${lnk(r.source, '公告') || esc(r.sourceName)}</p></li>`;
-              }).join('')}</ul>`
-            : '')
-        : '';
+      const topTags = [];
+      if (rankPos) topTags.push(`<span class="pk-crown" style="margin:0">全城 #${rankPos}</span>`);
+      if (sigHtml) topTags.push(sigHtml);
+      if (row.alerts?.some(a => a.priority >= 2)) topTags.push(`<span class="flag-pill">! ${esc(row.alerts[0].short)}</span>`);
+      if (pl.streetDensity != null) topTags.push(`<span class="micro-tag" style="margin:0">${pl.streetDensity < 8000 ? '低密' : pl.streetDensity >= 22000 ? '高密' : '密度'} ${(pl.streetDensity / 10000).toFixed(2)}万/km²</span>`);
+      if (row.fit.premiumPenalty) topTags.push(`<span class="flag-pill">溢价 −${row.fit.premiumPenalty}分</span>`);
 
-      const priceVital = row.estMonthly
-        ? `<span class="vital-item" title="${esc(pl.unitBasis)}"><strong>约${money(row.estMonthly)}/月</strong><small class="sub-note" style="margin:0">${pl.unitPrice}元/㎡ × ${state.sqm}㎡</small></span>`
-        : `<span class="vital-item" title="${esc(pl.unitBasis)}"><strong>${pl.unitPrice}元/㎡</strong><small class="sub-note" style="margin:0">${esc(pl.unitBasis)}</small></span>`;
+      const kickerParts = [pl.district, pl.station ? pl.station + '站' : pl.streetName, pl.lines?.length ? pl.lines.join('/') + '号线' : ''].filter(Boolean);
 
       return `<div class="drawer-head">
-          <p class="drawer-kicker">${esc([pl.district, pl.streetName, pl.station ? pl.station + '站' : ''].filter(Boolean).join(' · '))}</p>
+          <p class="drawer-kicker">${esc(kickerParts.join(' · '))}</p>
           <button type="button" class="drawer-close" data-close-drawer title="收起">×</button>
         </div>
-        <div class="drawer-title-row"><h2>${esc(pl.name)}</h2>${fitBadge}</div>
-        ${pl.tag ? `<p class="sub-note" style="margin:0 0 8px">${esc(pl.tag)}</p>` : ''}
-        ${fitBreakdown}
-        ${row.exclusions.length ? `<p class="sub-note" style="color:var(--warm);margin:0 0 6px">当前筛选外：${esc(row.exclusions.join('、'))}</p>` : ''}
-        <div class="vital-strip">${commPart}<span class="vital-sep">|</span>${priceVital}${sigHtml}</div>
-        ${peakNote}${comm2Note}${densityNote}${deltaHtml}
-        <div class="drawer-actions">
-          ${isCurDest(pl.name, pl.name + '板块')
-            ? `<button type="button" class="btn-dest is-current" data-clear-work title="点击取消目的地">★ 当前目的地 ×</button>`
-            : `<button type="button" class="btn-dest" data-set-work="${esc(pl.name + '板块')}">★ 设为目的地</button>`}
-          <button type="button" class="${saved ? 'btn-primary' : 'btn-ghost'}" data-toggle-save="${esc(pl.id)}" data-save-name="${esc(pl.name + '片区')}">${saved ? '★ 已收藏' : '☆ 收藏'}</button>
-          <button type="button" class="btn-ghost" data-toggle-ref="${esc(pl.id)}" aria-pressed="${isRef}">${isRef ? '⇄ 对比中' : '⇄ 设为对比'}</button>
-          <button type="button" class="btn-ghost" data-toggle-note aria-pressed="${noteFormOpen}">✎ 看房笔记</button>
+        <div class="drawer-title-row">
+          <h2>${esc(pl.name)}</h2>
+          <span class="hero-score-badge${scCls(row.fit.total)}" title="按「${esc(pm.name)}」画像加权计算"><strong>${row.fit.total}</strong><span>分${row.fit.verified ? ' · 实看' : ''}</span></span>
         </div>
-        ${noteFormHtml}${noteDisplay}${majorAlertHtml}${premHtml}${reasonCard}${multiHtml}${liveLinksHtml}${rentHtml}${estatesHtml}${affInPlateHtml}${evPolFold}${nearFacHtml}${riskHtml}`;
+        ${row.exclusions.length ? `<p class="sub-note" style="color:var(--warm);margin:0 0 6px">当前筛选外：${esc(row.exclusions.join('、'))}</p>` : ''}
+        <div class="kpi-grid">${kpiComm}${kpiRent}</div>
+        ${topTags.length ? `<div class="tag-strip">${topTags.join('')}</div>` : ''}
+        ${deltaHtml}
+        ${scoreCardHtml}
+        <div class="drawer-actions compact-row">
+          <button type="button" class="btn-primary" data-open-room-form="${esc(pl.id)}">+ 记一套看过的房</button>
+          <button type="button" class="${saved ? 'btn-primary' : 'btn-ghost'}" data-toggle-save="${esc(pl.id)}" data-save-name="${esc(pl.name + '片区')}">${saved ? '★ 已藏' : '☆ 收藏'}</button>
+          ${isCurDest(pl.name, pl.name + '板块')
+            ? `<button type="button" class="btn-dest is-current" data-clear-work title="点击取消目的地">★ 目的地 ×</button>`
+            : `<button type="button" class="btn-ghost" data-set-work="${esc(pl.name + '板块')}">设工作地</button>`}
+        </div>
+        ${roomFormHtml}${plateRoomsHtml}${noteFormHtml}${noteDisplay}${marketFoldHtml}${envFoldHtml}${affFoldHtml}`;
     }
 
     // 片区内具体小区 / 村落 / 保租房详情卡
@@ -655,6 +816,7 @@
         const wasHidden = el.hidden;
         el.innerHTML = `<div class="sheet-handle" data-sheet-handle role="button" tabindex="0" aria-label="拖动调整抽屉高度或下滑关闭"></div>` + html;
         if (wasHidden) el.classList.remove('sheet-tall');
+        if (roomFormPlateId && roomFormPlateId === state.selectedPlateId) el.classList.add('sheet-tall');
         el.hidden = false;
         stage.classList.add('drawer-open');
         const form = $('#place-note-form');
@@ -667,6 +829,58 @@
             convenience: fd.get('convenience'), note: fd.get('note'),
           });
         };
+        const rForm = el.querySelector('[data-room-form]');
+        if (rForm) {
+          const updatePreview = () => {
+            const fd = new FormData(rForm);
+            const uMode = fd.get('utilityMode') || 'civil';
+            const customWrap = rForm.querySelector('[data-util-custom-wrap]');
+            if (customWrap) customWrap.hidden = uMode !== 'custom';
+            const base = Math.max(0, Number(fd.get('rent')) || 0);
+            const mgmt = Math.max(0, Number(fd.get('mgmtFee')) || 0);
+            const net = Math.max(0, Number(fd.get('netFee')) || 0);
+            const uExtra = uMode === 'commercial' ? 220 : (uMode === 'custom' ? Math.max(0, Number(fd.get('utilityExtra')) || 0) : 0);
+            const agMon = Math.round(Math.max(0, Number(fd.get('agencyFee')) || 0) / 12);
+            const hid = mgmt + net + uExtra + agMon;
+            const box = rForm.querySelector('[data-true-cost-preview]');
+            if (box) {
+              box.innerHTML = `<span>真实月总支出</span><strong>${money(base + hid)}/月</strong><span class="sub-note" style="margin:0;width:100%">${hid > 0 ? `比标价多 ${money(hid)}/月（物业${mgmt}+网费${net}+水电差价${uExtra}+中介摊销${agMon}）` : '与标价一致，暂无额外杂费'}</span>`;
+            }
+          };
+          rForm.addEventListener('input', updatePreview);
+          rForm.addEventListener('change', updatePreview);
+          rForm.onsubmit = ev => {
+            ev.preventDefault();
+            const fd = new FormData(rForm);
+            const stars = {};
+            for (const k of store.STAR_KEYS) {
+              const v = fd.get('star_' + k);
+              stars[k] = v ? Number(v) : null;
+            }
+            const savedRoom = store.saveRoom({
+              id: rForm.dataset.roomId || undefined,
+              plateId: rForm.dataset.plateId,
+              plateName: rForm.dataset.plateName,
+              title: fd.get('title'),
+              housingType: fd.get('housingType'),
+              areaSqm: fd.get('areaSqm'),
+              walkMin: fd.get('walkMin'),
+              rent: fd.get('rent'),
+              mgmtFee: fd.get('mgmtFee'),
+              netFee: fd.get('netFee'),
+              utilityMode: fd.get('utilityMode'),
+              utilityExtra: fd.get('utilityExtra'),
+              agencyFee: fd.get('agencyFee'),
+              redFlags: fd.getAll('redFlags'),
+              stars,
+              note: fd.get('note'),
+            });
+            if (savedRoom) {
+              roomFormPlateId = '';
+              editingRoomId = '';
+            }
+          };
+        }
       } else {
         el.hidden = true;
         el.classList.remove('sheet-tall');
@@ -679,37 +893,87 @@
       if (!state.watchlistOpen) { host.hidden = true; return; }
       host.hidden = false;
       const entries = store.savedEntries();
-      const rows = entries.map(e => {
-        const plateRow = evalResult.plateRowById.get(e.id) || (engine.placeById.get(e.id) ? evalResult.plateRowById.get(engine.placeById.get(e.id).plateId) : null);
-        const placeRow = evalResult.placeRowById.get(e.id) || null;
-        return { entry: e, plateRow, placeRow };
-      });
-      const picks = rows.filter(x => x.plateRow).slice(0, 4);
+      const scoredRooms = evalResult.scoredRooms || [];
+      const activeTab = state.wlTab === 'plates' ? 'plates' : 'rooms';
+      const flagLabelById = new Map(store.RED_FLAGS.map(f => [f.id, f.label]));
 
-      const compareHtml = picks.length >= 2 ? `<div class="wl-table-wrap"><table class="wl-table"><thead><tr><th>维度</th>${picks.map(x => `<th><button type="button" class="btn-ghost" data-jump-id="${esc(x.entry.id)}">${esc(x.entry.name)}</button></th>`).join('')}</tr></thead><tbody>
-        <tr><th>每平米均价</th>${picks.map(x => `<td><strong>${x.plateRow.plate.unitPrice}元/㎡</strong><div class="sub-note">${esc(x.plateRow.plate.unitBasis)}</div></td>`).join('')}</tr>
-        <tr><th>单程通勤</th>${picks.map(x => {
-          const rt = x.placeRow?.route || x.plateRow.route;
-          return `<td>${evalResult.dest1 ? (rt ? `<strong>${rt.minutes}分</strong> ${esc(rt.label)}` : '待核') : '未设目的地'}</td>`;
-        }).join('')}</tr>
-        <tr><th>捡漏/避贵</th>${picks.map(x => `<td>${x.plateRow.premium?.status === 'premium' ? `<span class="sig-pill sig-prem">↑溢价¥${Math.round(x.plateRow.premium.extra)}</span>` : x.plateRow.arbitrage.status === 'opportunity' ? `<span class="sig-pill sig-opp">↘可捡漏</span>` : '—'}</td>`).join('')}</tr>
-        <tr><th>我的实录</th>${picks.map(x => `<td>${[x.entry.monthly ? '实谈' + money(x.entry.monthly) : '', x.entry.environment ? '环境' + x.entry.environment + '星' : '', x.entry.convenience ? '便利' + x.entry.convenience + '星' : ''].filter(Boolean).join(' · ') || '未记'}${x.entry.note ? `<div class="sub-note">${esc(x.entry.note)}</div>` : ''}</td>`).join('')}</tr>
-      </tbody></table></div>` : '';
+      const plateOpts = [...atlas.plates]
+        .sort((a, b) => a.district.localeCompare(b.district, 'zh-CN') || a.name.localeCompare(b.name, 'zh-CN'))
+        .map(p => `<option value="${esc(p.id)}">${esc(p.district.replace(/区$/, '') + ' · ' + p.name)}</option>`).join('');
 
-      const listHtml = entries.length ? `<ul class="clean-list">${rows.map(({ entry, plateRow }) => `<li>
-        <div class="rent-line"><strong>${esc(entry.name)}</strong><div>${plateRow ? `<button type="button" class="btn-ghost" data-jump-id="${esc(entry.id)}">地图查看</button> ` : ''}<button type="button" class="btn-ghost" data-toggle-save="${esc(entry.id)}" data-save-name="${esc(entry.name)}">${entry.saved ? '移除' : '重藏'}</button></div></div>
-        <p class="sub-note">${[entry.monthly ? '实谈 ' + money(entry.monthly) : '', entry.environment ? '环境' + entry.environment + '星' : '', entry.convenience ? '便利' + entry.convenience + '星' : '', entry.observed || '', entry.note || ''].filter(Boolean).join(' · ') || '已收藏，看房后可补录实价与感受。'}</p>
-      </li>`).join('')}</ul>` : '<p class="sub-note">清单还是空的，点击地图任意片区并点「收藏」即可开始横向对比。</p>';
+      let bodyHtml = '';
+      if (activeTab === 'rooms') {
+        if (scoredRooms.length) {
+          const pkCols = scoredRooms.slice(0, 6);
+          const pkTable = `<div class="wl-table-wrap"><table class="wl-table"><thead><tr><th>PK 维度</th>${pkCols.map((rm, i) => `<th>
+            ${i === 0 ? `<div class="pk-crown">👑 #1 推荐签约</div>` : `<div class="sub-note" style="margin:0 0 3px">第 ${i + 1} 名</div>`}
+            <div><strong>${esc(rm.title)}</strong></div>
+            <div class="sub-note" style="margin:2px 0 4px">${esc(rm.plateName || rm.plateRow?.plate?.name || '')} · ${esc(rm.housingType)}${rm.areaSqm ? ' ' + rm.areaSqm + '㎡' : ''}</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              ${rm.plateId ? `<button type="button" class="btn-ghost" data-edit-room="${esc(rm.id)}" data-plate-id="${esc(rm.plateId)}">编辑</button>` : ''}
+              <button type="button" class="btn-ghost" data-delete-room="${esc(rm.id)}">删除</button>
+            </div>
+          </th>`).join('')}</tr></thead><tbody>
+            <tr><th>综合实测分</th>${pkCols.map(rm => `<td><strong style="font-size:18px;color:${rm.total >= 75 ? 'var(--accent)' : rm.total >= 60 ? '#c99838' : 'var(--warm)'}">${rm.total} 分</strong>${rm.redFlagPenalty ? `<div class="sub-note" style="color:var(--warm)">含硬伤扣 −${rm.redFlagPenalty}分</div>` : '<div class="sub-note">零硬伤扣分</div>'}</td>`).join('')}</tr>
+            <tr><th>真实月全成本</th>${pkCols.map(rm => `<td><strong style="font-size:15px">${money(rm.trueMonthly)}/月</strong><div class="sub-note">标价 ${money(rm.baseRent)}${rm.hiddenMonthly > 0 ? ` + 杂费 <span style="color:var(--warm)">${money(rm.hiddenMonthly)}</span>` : '（零隐形杂费）'}</div><div class="sub-note">${[rm.mgmtFee ? '物业' + rm.mgmtFee : '', rm.netFee ? '网费' + rm.netFee : '', rm.utilityExtra ? '商水电+' + rm.utilityExtra : '民水电', rm.agencyMonthly ? '中介摊销' + rm.agencyMonthly : ''].filter(Boolean).join(' · ')}</div></td>`).join('')}</tr>
+            <tr><th>通勤估时</th>${pkCols.map(rm => `<td>${rm.commuteMin != null ? `<strong>${rm.commuteMin}分</strong>${rm.walkMin ? `<div class="sub-note">含实测步行 ${rm.walkMin}分</div>` : ''}` : (evalResult.dest1 ? '待核' : '未设工作地')}</td>`).join('')}</tr>
+            <tr><th>现场 6 维星评</th>${pkCols.map(rm => {
+              const bits = store.STAR_KEYS.filter(k => rm.stars?.[k]).map(k => `${STAR_LABELS[k].slice(0, 2)} ${rm.stars[k]}★`);
+              return `<td>${bits.length ? bits.map(b => `<span class="micro-tag" style="margin:0 3px 3px 0;display:inline-block">${esc(b)}</span>`).join('') : '<span class="sub-note">未打星</span>'}</td>`;
+            }).join('')}</tr>
+            <tr><th>红灯硬伤排雷</th>${pkCols.map(rm => `<td>${rm.redFlags.length ? rm.redFlags.map(id => `<span class="flag-pill" style="display:inline-block;margin:0 3px 3px 0">⚠ ${esc(flagLabelById.get(id) || id)}</span>`).join('') : '<span class="flag-ok">✓ 零硬伤</span>'}</td>`).join('')}</tr>
+            <tr><th>看房备忘</th>${pkCols.map(rm => `<td>${rm.note ? esc(rm.note) : '<span class="sub-note">—</span>'}<div class="sub-note">${esc(rm.observed)}</div></td>`).join('')}</tr>
+          </tbody></table></div>`;
+          bodyHtml = pkTable + `<div class="pk-quick-add"><span class="sub-note" style="margin:0">继续记一套看过的房：</span><select data-pk-plate-select>${plateOpts}</select><button type="button" class="btn-primary" data-pk-add-room>+ 去记录打分</button></div>`;
+        } else {
+          bodyHtml = `<div class="pk-empty">
+            <div><strong style="font-size:15px">还没有记录看过的具体房源</strong><p class="sub-note" style="margin:4px 0 0">周末看完 3–5 套房最容易记混。用「一房一卡」自动算清物业、网费、商水商电和中介费摊销后的<strong>真实月全成本</strong>，勾出暗窗/隔断/蟑螂硬伤，系统会自动排出 #1 推荐签约房源。</p></div>
+            <div class="pk-quick-add">
+              <select data-pk-plate-select>${plateOpts}</select>
+              <button type="button" class="btn-primary" data-pk-add-room>+ 记第一套看过的房</button>
+              <button type="button" class="btn-ghost" data-close-wl>先回地图看推荐榜</button>
+            </div>
+          </div>`;
+        }
+      } else {
+        const rows = entries.map(e => {
+          const plateRow = evalResult.plateRowById.get(e.id) || (engine.placeById.get(e.id) ? evalResult.plateRowById.get(engine.placeById.get(e.id).plateId) : null);
+          const placeRow = evalResult.placeRowById.get(e.id) || null;
+          return { entry: e, plateRow, placeRow };
+        });
+        const picks = rows.filter(x => x.plateRow).slice(0, 5);
+        const compareHtml = picks.length >= 2 ? `<div class="wl-table-wrap"><table class="wl-table"><thead><tr><th>维度</th>${picks.map(x => `<th><button type="button" class="btn-ghost" data-jump-id="${esc(x.entry.id)}">${esc(x.entry.name)}</button></th>`).join('')}</tr></thead><tbody>
+          <tr><th>综合推荐分</th>${picks.map(x => `<td><strong style="font-size:16px;color:var(--accent)">${x.plateRow.fit.total} 分</strong><div class="sub-note">${esc(x.plateRow.fit.topReason)}</div></td>`).join('')}</tr>
+          <tr><th>每平米均价</th>${picks.map(x => `<td><strong>${x.plateRow.plate.unitPrice}元/㎡</strong><div class="sub-note">${esc(x.plateRow.plate.unitBasis)}</div></td>`).join('')}</tr>
+          <tr><th>单程通勤</th>${picks.map(x => {
+            const rt = x.placeRow?.route || x.plateRow.route;
+            return `<td>${evalResult.dest1 ? (rt ? `<strong>${rt.minutes}分</strong> ${esc(rt.label)}` : '待核') : '未设目的地'}</td>`;
+          }).join('')}</tr>
+          <tr><th>捡漏/避贵</th>${picks.map(x => `<td>${x.plateRow.premium?.status === 'premium' ? `<span class="sig-pill sig-prem">↑溢价¥${Math.round(x.plateRow.premium.extra)}</span>` : x.plateRow.arbitrage.status === 'opportunity' ? `<span class="sig-pill sig-opp">↘可捡漏</span>` : '—'}</td>`).join('')}</tr>
+          <tr><th>我的实录</th>${picks.map(x => `<td>${[x.plateRow.rooms?.length ? '已看 ' + x.plateRow.rooms.length + ' 套房' : '', x.entry.monthly ? '实谈' + money(x.entry.monthly) : '', x.entry.environment ? '环境' + x.entry.environment + '星' : '', x.entry.convenience ? '便利' + x.entry.convenience + '星' : ''].filter(Boolean).join(' · ') || '未记'}${x.entry.note ? `<div class="sub-note">${esc(x.entry.note)}</div>` : ''}</td>`).join('')}</tr>
+        </tbody></table></div>` : '';
+
+        const listHtml = entries.length ? `<ul class="clean-list">${rows.map(({ entry, plateRow }) => `<li>
+          <div class="rent-line"><strong>${esc(entry.name)}${plateRow ? ` <span class="micro-tag">${plateRow.fit.total}分</span>` : ''}</strong><div>${plateRow ? `<button type="button" class="btn-ghost" data-jump-id="${esc(entry.id)}">地图查看</button> ` : ''}<button type="button" class="btn-ghost" data-toggle-save="${esc(entry.id)}" data-save-name="${esc(entry.name)}">${entry.saved ? '移除' : '重藏'}</button></div></div>
+          <p class="sub-note">${[entry.monthly ? '实谈 ' + money(entry.monthly) : '', entry.environment ? '环境' + entry.environment + '星' : '', entry.convenience ? '便利' + entry.convenience + '星' : '', entry.observed || '', entry.note || ''].filter(Boolean).join(' · ') || '已收藏，看房后可记一套实看卡片。'}</p>
+        </li>`).join('')}</ul>` : '<p class="sub-note">还没有收藏片区，点击地图任意片区并点「收藏」即可横向对比。</p>';
+        bodyHtml = compareHtml + listHtml;
+      }
 
       host.innerHTML = `<div class="wl-inner">
         <div class="wl-head">
-          <div><h2 style="margin:0">我的看房清单 (${entries.length})</h2><p class="sub-note">自动兼容旧版看房手记，可随时导出 JSON 备份。</p></div>
+          <div><h2 style="margin:0">看房打分 PK 台</h2><p class="sub-note">真实月全成本 + 红灯排雷自动排序 · 100% 兼容旧版收藏手记 JSON 备份</p></div>
           <div class="drawer-actions" style="margin:0">
             <button type="button" id="btn-export-wl" class="btn-ghost">导出 JSON</button>
             <label class="btn-ghost" style="cursor:pointer">导入备份<input id="input-import-wl" type="file" accept=".json,application/json" hidden></label>
             <button type="button" class="btn-primary" data-close-wl>返回地图</button>
           </div>
-        </div>${compareHtml}${listHtml}</div>`;
+        </div>
+        <div class="pk-tabs" role="tablist">
+          <button type="button" data-wl-tab="rooms" aria-pressed="${activeTab === 'rooms'}">实地看房 PK 榜 (${scoredRooms.length}套)</button>
+          <button type="button" data-wl-tab="plates" aria-pressed="${activeTab === 'plates'}">收藏片区对比 (${entries.length}处)</button>
+        </div>
+        ${bodyHtml}</div>`;
 
       const expBtn = $('#btn-export-wl');
       if (expBtn) expBtn.onclick = () => {
@@ -730,24 +994,23 @@
     }
 
     function refresh() {
+      if ((state.mode === 'drive' || state.mode === 'bus') && !engine.isModeReady(state.mode)) {
+        const targetMode = state.mode;
+        engine.ensureModeReady(targetMode).then(ok => {
+          if (ok && state.mode === targetMode) refresh();
+        });
+      }
       evalResult = engine.evaluateAll(state, store);
       syncTopbar();
       renderSubPills();
 
-      const savedCount = store.savedEntries().filter(e => e.saved).length;
+      const savedCount = store.savedEntries().filter(e => e.saved).length + (evalResult.scoredRooms?.length || 0);
       $('#saved-count').textContent = String(savedCount);
-      $('#explore-progress').textContent = `已看 ${state.seen.size}/${atlas.plates.length} 片区`;
       const L = state.layers || {};
-      $('#match-summary').textContent = state.macroOpen
-        ? `全城各区均价${state.macroMetric === 'listing' ? listingPeriod : ''}`
-        : L.affordable && !L.rent && !L.commute
-          ? `保租房 ${(evalResult.affordableRows || []).filter(r => !state.affFilter || r.project.phase === state.affFilter).length} 处`
-          : `符合条件 ${evalResult.eligiblePlates.length} 处`;
       showToast(state.status);
 
       const isRadial = !!L.commute && state.layout === 'radial' && !!evalResult.dest1;
       $('#zoom-box').hidden = isRadial;
-      $('#btn-discover').disabled = evalResult.eligiblePlates.length === 0;
 
       const legendHtml = map.render({ state, evalResult, store });
       $('#map-legend').innerHTML = legendHtml;
@@ -756,7 +1019,7 @@
     }
 
     function clearSelection() {
-      fitExpanded = false; noteFormOpen = false;
+      noteFormOpen = false; roomFormPlateId = ''; editingRoomId = '';
       store.patch({
         selectedPlateId: '', selectedPlaceId: '', selectedLandmarkId: '',
         selectedDistrict: '', selectedRiskId: '', selectedFacilityId: '', selectedAffId: '',
@@ -773,10 +1036,14 @@
       const pl = engine.plateById.get(plateId);
       if (!pl) return;
       state.seen.add(plateId);
-      fitExpanded = false; noteFormOpen = false;
+      noteFormOpen = false;
+      if (roomFormPlateId && roomFormPlateId !== plateId) { roomFormPlateId = ''; editingRoomId = ''; }
       if (fitCamera || (global.innerWidth || 1200) <= 820) fitForDrawer(pl.bounds);
+      // 选定片区拉出抽屉时自动收起左侧推荐榜，杜绝左右双面板夹击地图
+      const autoFoldRank = state.rankOpen && ((global.innerWidth || 1200) < 1440);
       store.patch({
         watchlistOpen: false, macroOpen: false,
+        rankOpen: autoFoldRank ? false : state.rankOpen,
         selectedPlateId: plateId, selectedPlaceId: '', selectedLandmarkId: '',
         selectedDistrict: '', selectedRiskId: '', selectedFacilityId: '', selectedAffId: '', status: '',
       });
@@ -832,6 +1099,12 @@
       };
     }
 
+    $('#rank-toggle-btn').onclick = () => store.patch({ rankOpen: !state.rankOpen, status: '' });
+    $('#rank-body').addEventListener('change', ev => {
+      const inp = ev.target.closest('[data-weight]');
+      if (inp) store.setWeight(inp.dataset.weight, inp.value);
+    });
+
     // 图例内嵌「底色」选择器事件
     $('#map-legend').addEventListener('change', ev => {
       const sel = ev.target.closest('[data-fill-select]');
@@ -864,21 +1137,11 @@
       });
     };
 
-    $('#btn-discover').onclick = () => {
-      const next = engine.discoverNext(evalResult, state.seen);
-      if (!next) { showToast('符合条件的片区已全部看过，可放宽条件'); return; }
-      selectPlate(next.plate.id, true);
-      const tips = [next.estMonthly ? `约${money(next.estMonthly)}/月` : `${next.plate.unitPrice}元/㎡`];
-      if (evalResult.dest1 && next.route) tips.push(`${next.route.minutes}分可达`);
-      if (next.arbitrage.status === 'opportunity') tips.push('↘ 可捡漏');
-      showToast(`推荐 ${next.plate.name}片区 · ${tips.join(' · ')}`);
-    };
-
     // 全局点击代理
     document.body.addEventListener('click', ev => {
       if (!ev.target.closest('.pop-anchor,.search-wrap')) closePopovers();
 
-      const el = ev.target.closest('[data-track],[data-map-filter],[data-map-preset],[data-set-work],[data-set-work2],[data-clear-work],[data-prompt-work],[data-sqm-quick],[data-htype],[data-mode],[data-peak],[data-layer],[data-fill-layer],[data-trend-kind],[data-toggle-macro],[data-close-macro],[data-aff-filter],[data-macro],[data-layout],[data-zoom],[data-plate],[data-pick-plate],[data-back-plate],[data-open-place],[data-aff],[data-landmark],[data-district],[data-risk],[data-fac],[data-risk-filter],[data-fac-filter],[data-toggle-save],[data-toggle-ref],[data-toggle-hub],[data-toggle-fit],[data-toggle-note],[data-close-drawer],[data-close-wl],[data-jump-id]');
+      const el = ev.target.closest('[data-profile],[data-open-room-form],[data-cancel-room-form],[data-edit-room],[data-delete-room],[data-wl-tab],[data-open-pk],[data-pk-add-room],[data-track],[data-map-filter],[data-map-preset],[data-set-work],[data-set-work2],[data-clear-work],[data-prompt-work],[data-sqm-quick],[data-htype],[data-mode],[data-peak],[data-layer],[data-fill-layer],[data-trend-kind],[data-toggle-macro],[data-close-macro],[data-aff-filter],[data-macro],[data-layout],[data-zoom],[data-plate],[data-pick-plate],[data-back-plate],[data-open-place],[data-aff],[data-landmark],[data-district],[data-risk],[data-fac],[data-risk-filter],[data-fac-filter],[data-toggle-save],[data-toggle-ref],[data-toggle-hub],[data-toggle-note],[data-close-drawer],[data-close-wl],[data-jump-id]');
       if (!el) {
         if (ev.target === $('#atlas-svg') && (state.selectedPlateId || state.selectedPlaceId || state.selectedLandmarkId || state.selectedDistrict || state.selectedRiskId || state.selectedFacilityId || state.selectedAffId)) {
           clearSelection();
@@ -887,6 +1150,41 @@
       }
 
       const d = el.dataset;
+      if (d.profile) { store.setProfile(d.profile); return; }
+      if (d.openRoomForm) {
+        roomFormPlateId = d.openRoomForm;
+        editingRoomId = '';
+        renderDrawer();
+        return;
+      }
+      if ('cancelRoomForm' in d) { roomFormPlateId = ''; editingRoomId = ''; renderDrawer(); return; }
+      if (d.editRoom) {
+        editingRoomId = d.editRoom;
+        roomFormPlateId = d.plateId || state.selectedPlateId;
+        if (state.watchlistOpen && roomFormPlateId) {
+          selectPlate(roomFormPlateId, true);
+        } else {
+          renderDrawer();
+        }
+        return;
+      }
+      if (d.deleteRoom) {
+        if (editingRoomId === d.deleteRoom) { editingRoomId = ''; roomFormPlateId = ''; }
+        store.deleteRoom(d.deleteRoom);
+        return;
+      }
+      if (d.wlTab) { store.patch({ wlTab: d.wlTab, status: '' }); return; }
+      if ('openPk' in d) { closePopovers(); store.patch({ watchlistOpen: true, wlTab: 'rooms', status: '' }); return; }
+      if ('pkAddRoom' in d) {
+        const sel = $('#watchlist-overlay')?.querySelector('[data-pk-plate-select]');
+        const pid = sel?.value || evalResult.topPlates?.[0]?.plate.id || atlas.plates[0]?.id;
+        if (pid) {
+          roomFormPlateId = pid;
+          editingRoomId = '';
+          selectPlate(pid, true);
+        }
+        return;
+      }
       if (d.track) { closePopovers(); store.setHousingTrack(d.track); return; }
       if (d.mapFilter) { store.toggleMapFilter(d.mapFilter); return; }
       if (d.mapPreset) { store.applyMapPreset(d.mapPreset); return; }
@@ -975,7 +1273,6 @@
         return;
       }
       if (d.toggleHub) { store.toggleUsedHub(d.toggleHub); return; }
-      if ('toggleFit' in d) { fitExpanded = !fitExpanded; renderDrawer(); return; }
       if ('toggleNote' in d) { noteFormOpen = !noteFormOpen; renderDrawer(); return; }
       if ('closeDrawer' in d) { clearSelection(); return; }
       if ('closeWl' in d) { store.patch({ watchlistOpen: false }); return; }
@@ -1032,9 +1329,7 @@
           ? `<div class="hc-alerts">${row.alerts.slice(0, 2).map(a => `<div class="hc-alert hc-alert-${a.level}"><strong>!</strong> <span>${esc(a.title)}</span></div>`).join('')}</div>`
           : '';
 
-        const priceHead = row.estMonthly
-          ? `约${money(row.estMonthly)}/月`
-          : `${pl.unitPrice}元/㎡`;
+        const priceHead = `${row.fit.verified ? '✓' : ''}${row.fit.total}分 · ${row.estMonthly ? '约' + money(row.estMonthly) + '/月' : pl.unitPrice + '元/㎡'}`;
         const subParts = [pl.district + '·' + pl.streetName];
         if (row.estMonthly) subParts.push(`${pl.unitPrice}元/㎡ × ${state.sqm}㎡`);
         if (row.route) subParts.push(`${state.peak ? '早高峰' : '通勤'} ${row.route.minutes}分 (${row.route.label})`);
@@ -1042,14 +1337,13 @@
         if (state.layers?.density && row.density != null) {
           subParts.push(`${pl.streetName}密度 ${(row.density / 10000).toFixed(2)}万/km²(七普)`);
         }
-        if (row.fit.count >= 2) subParts.push(`匹配度 ${row.fit.rangeText}`);
 
         return `<div class="hc-head"><strong>${esc(pl.name)}</strong><span class="hc-price">${esc(priceHead)}</span></div>
           <div class="hc-sub">${esc(subParts.join(' · '))}</div>
           ${alertStrip}
           ${buffs.length ? `<div class="hc-buffs">${buffs.slice(0, 5).map(b => `<span class="hc-tag hc-buff">${esc(b)}</span>`).join('')}</div>` : ''}
           ${debuffs.length ? `<div class="hc-debuffs">${debuffs.map(b => `<span class="hc-tag hc-debuff">${esc(b)}</span>`).join('')}</div>` : ''}
-          <div class="hc-foot">左键看月租与小区 · 右键直接设为目的地</div>`;
+          <div class="hc-foot">左键看评分拆解与记看房卡 · 右键设为目的地</div>`;
       }
       if (d.aff) {
         const ar = evalResult.affRowById?.get(d.aff);

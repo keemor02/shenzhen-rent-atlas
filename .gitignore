@@ -11,5 +11,6 @@ Thumbs.db
 .map-integrate-*/
 深圳租房收藏备份-*.json
 深圳寻房手记-*.json
+深圳租房看房清单-*.json
 dist/
 update-report.md

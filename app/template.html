@@ -23,25 +23,25 @@
       </div>
       <div id="omni-pop" class="popover omni-pop" hidden></div>
     </div>
+  </div>
 
-    <!-- 目的地 → 通勤方式 → 时长上限 一体化联动胶囊（设好目的地自动解锁高亮） -->
-    <div id="commute-hub" class="commute-hub" hidden aria-label="目的地与通勤联动控制">
-      <div id="work-pill" class="work-pill"></div>
-      <span class="hub-arrow" aria-hidden="true">←</span>
-      <div class="mode-pills" id="mode-seg" role="group" aria-label="出行方式">
-        <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
-        <button type="button" data-mode="bus" aria-pressed="false">公交</button>
-        <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
-      </div>
-      <div class="mode-pills peak-pills" id="peak-seg" role="group" aria-label="出行时段" title="平峰为路网基准；早高峰叠加深圳地铁限流排队或早高峰潮汐拥堵估算">
-        <button type="button" data-peak="0" aria-pressed="true">平峰</button>
-        <button type="button" data-peak="1" aria-pressed="false">早高峰</button>
-      </div>
-      <label class="limit-pill" title="单程通勤时长上限">
-        <span class="limit-tag">≤<strong id="limit-readout">50分</strong></span>
-        <input id="limit-range" type="range" min="15" max="90" step="5" value="50" aria-label="单程通勤上限">
-      </label>
+  <!-- 目的地 → 通勤方式 → 时长上限 一体化联动胶囊（直属 topbar，桌面居中单行、手机干净独占第二行！） -->
+  <div id="commute-hub" class="commute-hub" hidden aria-label="目的地与通勤联动控制">
+    <div id="work-pill" class="work-pill"></div>
+    <span class="hub-arrow" aria-hidden="true">←</span>
+    <div class="mode-pills" id="mode-seg" role="group" aria-label="出行方式">
+      <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
+      <button type="button" data-mode="bus" aria-pressed="false">公交</button>
+      <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
     </div>
+    <div class="mode-pills peak-pills" id="peak-seg" role="group" aria-label="出行时段" title="平峰为路网基准；早高峰叠加深圳地铁限流排队或早高峰潮汐拥堵估算">
+      <button type="button" data-peak="0" aria-pressed="true">平峰</button>
+      <button type="button" data-peak="1" aria-pressed="false">早高峰</button>
+    </div>
+    <label class="limit-pill" title="单程通勤时长上限">
+      <span class="limit-tag">≤<strong id="limit-readout">50分</strong></span>
+      <input id="limit-range" type="range" min="15" max="90" step="5" value="50" aria-label="单程通勤上限">
+    </label>
   </div>
 
   <div class="tb-filters" aria-label="居住要求">
@@ -87,7 +87,7 @@
   </div>
 
   <div class="tb-right">
-    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ <span class="wl-lbl">看房清单 </span><span id="saved-count">0</span></button>
+    <button type="button" id="watchlist-btn" class="pill-btn" aria-pressed="false">★ <span class="wl-lbl">看房 PK </span><span id="saved-count">0</span></button>
     <div class="pop-anchor">
       <button type="button" id="help-btn" class="icon-btn" title="数据说明" aria-expanded="false">?</button>
       <div id="help-pop" class="popover help-pop" hidden></div>
@@ -100,9 +100,10 @@
   <svg id="atlas-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房片区探索地图，可缩放拖动"></svg>
 
   <div class="hud-top-left">
-    <div class="hud-meta">
-      <span id="explore-progress" class="hud-chip"></span>
-      <span id="match-summary" class="hud-chip"></span>
+    <!-- 极简左上悬浮「★ Top 5 推荐榜 + 画像权重」胶囊（默认收起，点开即看） -->
+    <div id="rank-panel" class="rank-panel">
+      <button type="button" id="rank-toggle-btn" class="rank-toggle-btn" aria-expanded="false">★ Top 5 推荐 ▾</button>
+      <div id="rank-body" class="rank-body" hidden></div>
     </div>
     <div id="status-bar" class="hud-toast" role="status" hidden></div>
   </div>
@@ -113,25 +114,23 @@
   <div class="dock-bottom">
     <div id="sub-pill-row" class="sub-pill-row" hidden></div>
     <div class="dock-bar">
-      <!-- 1. 房源轨道分离：市场租房（民房/小区/商业公寓） vs 政府保租房 -->
+      <!-- 1. 房源轨道分离：市场租房 vs 政府保租房 -->
       <div class="track-seg" id="track-seg" role="group" aria-label="房源类别切换">
         <button type="button" data-track="market" aria-pressed="true" title="城中村民房、老小区、电梯小区、商业公寓">市场房</button>
         <button type="button" data-track="affordable" aria-pressed="false" title="政府保障性租赁住房（申请中 / 往期 / 在建）">保租房</button>
       </div>
 
-      <!-- 2. 数据维度多选开关（市场房：5项可叠加；保租房：自动切为状态筛选+通勤） -->
-      <div class="layer-dock" id="layer-dock" role="group" aria-label="地图数据维度开关（可多选组合）">
+      <!-- 2. 核心三视角（推荐分 / 租金 / 通勤） -->
+      <div class="layer-dock" id="layer-dock" role="group" aria-label="地图核心视角开关（可多选组合）">
+        <button type="button" data-layer="score" aria-pressed="true"><i class="ld-dot"></i>推荐分</button>
         <button type="button" data-layer="rent" aria-pressed="true"><i class="ld-dot"></i>租金</button>
         <button type="button" data-layer="commute" aria-pressed="false"><i class="ld-dot"></i>通勤</button>
-        <button type="button" data-layer="trend" aria-pressed="false"><i class="ld-dot"></i>涨跌</button>
-        <button type="button" data-layer="premium" aria-pressed="false"><i class="ld-dot"></i>捡漏/避贵</button>
-        <button type="button" data-layer="density" aria-pressed="false"><i class="ld-dot"></i>人口</button>
       </div>
       <div class="layer-dock" id="aff-dock" role="group" aria-label="保租房批次筛选" hidden></div>
 
-      <!-- 3. 地图物体与事件筛选浮层（一键隐藏中立地标/山体/外迁线，或叠加配套/避坑事件） -->
+      <!-- 3. 统一收纳「进阶数据叠加 + 地图标点与事件筛选」 -->
       <div class="pop-anchor">
-        <button type="button" id="map-filter-btn" class="map-filter-btn" aria-expanded="false">标点与事件 <span id="map-filter-badge" class="mf-badge" hidden></span>▾</button>
+        <button type="button" id="map-filter-btn" class="map-filter-btn" aria-expanded="false">筛选 <span id="map-filter-badge" class="mf-badge" hidden></span>▾</button>
         <div id="map-filter-pop" class="popover map-filter-pop" hidden></div>
       </div>
     </div>
@@ -146,7 +145,6 @@
         <button type="button" data-zoom="out" title="缩小">−</button>
         <button type="button" data-zoom="reset" title="全深圳">⛶</button>
       </div>
-      <button type="button" id="btn-discover" class="btn-discover">✦ 推荐下一处</button>
     </div>
   </div>
 

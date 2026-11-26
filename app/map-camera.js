@@ -5,18 +5,31 @@ function atlasExtent(boxes) {
 
 function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null) {
   let cx, cy, zoom, frame=0, settleTimer=0, dragged=false, blockClick=false;
-  let initial=null, lastTapTime=0, lastTapPt=null;
+  let initial=null, lastTapTime=0, lastTapPt=null, cachedRect=null;
   const pointers=new Map();
   const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
   const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  const invalidateRect=()=>{ cachedRect=null; };
+  function getRect() {
+    if (!cachedRect) {
+      const r=svg.getBoundingClientRect();
+      cachedRect={ width:r.width||740, height:r.height||420, left:r.left||0, top:r.top||0 };
+    }
+    return cachedRect;
+  }
+  if (typeof window!=='undefined' && window.addEventListener) window.addEventListener('resize', invalidateRect);
+  if (typeof ResizeObserver==='function' && svg && typeof svg.nodeType==='number') {
+    try { new ResizeObserver(invalidateRect).observe(svg); } catch {}
+  }
   function viewport() {
-    const rect=svg.getBoundingClientRect();
+    const rect=getRect();
     const w=rect.width||740, h=rect.height||420;
     const unit=Math.min((w-28)/(world[2]-world[0]),(h-28)/(world[3]-world[1]));
     const k=unit*zoom, tx=w/2-cx*k, ty=h/2-cy*k;
     return {w,h,k,tx,ty,pt:p=>[p[0]*k+tx,p[1]*k+ty],worldAt:p=>[(p[0]-tx)/k,(p[1]-ty)/k]};
   }
   function fit(box=world, opt={}) {
+    invalidateRect();
     const padB=Math.max(0, Number(opt?.padBottom)||0);
     cx=(box[0]+box[2])/2;cy=(box[1]+box[3])/2;zoom=1;
     const {k,w,h}=viewport();
@@ -33,7 +46,8 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
   function redraw(interactive=false) {
     if(!interactive){
       flushSettle();
-      if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(enabled())repaint();});
+      if(frame){if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(frame);frame=0;}
+      frame=requestAnimationFrame(()=>{frame=0;svg.classList?.remove?.('panning');if(enabled())repaint();});
       return;
     }
     if(!frame)frame=requestAnimationFrame(()=>{
@@ -41,10 +55,11 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       if(!enabled())return;
       if(typeof fastTransform==='function'&&fastTransform(viewport())){
         flushSettle();
-        settleTimer=setTimeout(()=>{settleTimer=0;if(enabled())repaint();},90);
+        settleTimer=setTimeout(()=>{settleTimer=0;if(!dragged)svg.classList?.remove?.('panning');if(enabled())repaint();},150);
         return;
       }
       flushSettle();
+      if(!dragged)svg.classList?.remove?.('panning');
       repaint();
     });
   }
@@ -55,7 +70,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
     cx=clamp(oldWorld[0]-(point[0]-w/2)/k,world[0],world[2]);
     cy=clamp(oldWorld[1]-(point[1]-h/2)/k,world[1],world[3]);
   }
-  const local=e=>{const r=svg.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  const local=e=>{const r=getRect();return [e.clientX-r.left,e.clientY-r.top];};
   function move(factor=1,dx=0,dy=0,at,interactive=false) {
     const v=viewport(),p=at||[v.w/2,v.h/2];
     anchor([p[0]+dx,p[1]+dy],v.worldAt(p),factor);redraw(interactive);
@@ -76,7 +91,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
   },{passive:false});
   svg.addEventListener('pointerdown',e=>{
     if(!enabled()||e.button!==0||pointers.size>=2)return;
-    if(!pointers.size){dragged=false;blockClick=false;}
+    if(!pointers.size){invalidateRect();dragged=false;blockClick=false;}
     pointers.set(e.pointerId,local(e));initial=gesture();
     // Preserve the original hit target for a tap. Capture on the SVG only once dragging.
     if(pointers.size===2){dragged=true;for(const id of pointers.keys())svg.setPointerCapture?.(id);}
@@ -106,7 +121,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       }
       lastTapTime=now; lastTapPt=ptNow;
     }
-    if(wasDragged&&settleTimer){flushSettle();redraw(false);}
+    if(wasDragged){flushSettle();redraw(false);}
   }
   for(const name of ['pointerup','pointercancel'])svg.addEventListener(name,end);
   svg.addEventListener('lostpointercapture',e=>{if(e.target===svg)end(e);});

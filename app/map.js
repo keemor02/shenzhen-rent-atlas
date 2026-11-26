@@ -6,6 +6,8 @@
 (function (global) {
   'use strict';
 
+  const SCORE_COLORS = ['#944d3e', '#b88f46', '#469c84', '#1d8c6e'];
+  const SCORE_CUTS = [60, 72, 82];
   const UNIT_COLORS = ['#247c6a', '#55a087', '#c7ab67', '#b9664c'];
   const UNIT_CUTS = [55, 75, 100];
   const TREND_COLORS = ['#6f9cc0', '#4f7591', '#314c5f', '#8d6445', '#b96f47'];
@@ -68,12 +70,13 @@
   }
 
   function tierForZoom(k) {
-    return (k >= 0.9) + (k >= 2.5) + (k >= 2.8) + (k >= 4.2);
+    return (k >= 0.9) + (k >= 2.5) + (k >= 3.2) + (k >= 4.2);
   }
 
   function createMap(svg, atlas, engine, timing, esc) {
     const world = global.atlasExtent(atlas.plates.map(p => p.bounds));
     let lastPayload = null;
+    let lastGeoEval = null, lastGeoKey = '';
 
     const west = atlas.stations.find(s => s[0] === '宝安中心');
     const east = atlas.stations.find(s => s[0] === '坪山围');
@@ -87,18 +90,18 @@
     const stationXY = name => engine.nodes.has(name) ? project(engine.nodes.get(name).coord) : null;
     const walkRadiusMapUnits = Math.abs((900 / 102700) * lonScale); // 15 分钟步行圈 ≈ 900m
 
+    // 60fps 丝滑平移缩放：全程保持轻量矩阵变换，绝不在缩放跨层级中途打断重排，手势停稳后再局部刷新标牌
     function fastTransform(view) {
       if (typeof svg.querySelector !== 'function') return false;
       const geo = svg.querySelector('.v3-geo');
       if (!geo || !geo.dataset?.baseK) return false;
-      if (Number(geo.dataset.zoomTier) !== tierForZoom(view.k)) return false;
       const baseK = Number(geo.dataset.baseK), btx = Number(geo.dataset.baseTx), bty = Number(geo.dataset.baseTy);
-      geo.setAttribute('transform', `translate(${view.tx.toFixed(2)} ${view.ty.toFixed(2)}) scale(${view.k})`);
+      geo.setAttribute('transform', `matrix(${view.k.toFixed(5)} 0 0 ${view.k.toFixed(5)} ${view.tx.toFixed(2)} ${view.ty.toFixed(2)})`);
       const ov = svg.querySelector('.v3-overlay');
       if (ov) {
         const rk = view.k / baseK;
         const dx = view.tx - btx * rk, dy = view.ty - bty * rk;
-        ov.setAttribute('transform', `translate(${dx.toFixed(2)} ${dy.toFixed(2)}) scale(${rk.toFixed(4)})`);
+        ov.setAttribute('transform', `matrix(${rk.toFixed(5)} 0 0 ${rk.toFixed(5)} ${dx.toFixed(2)} ${dy.toFixed(2)})`);
       }
       return true;
     }
@@ -170,6 +173,7 @@
         return '#2c6f7a';
       }
       if (!row.eligible) return '#1d3034';
+      if (fillMode === 'score') return pickColor(row.fit?.total, SCORE_CUTS, SCORE_COLORS) || '#243f45';
       if (fillMode === 'commute') return pickColor(row.route?.minutes, COMMUTE_CUTS, COMMUTE_COLORS) || '#243f45';
       if (fillMode === 'premium') {
         if (row.premium?.status === 'premium') return RADAR_COLORS.premium;
@@ -258,8 +262,8 @@
       return primaryMetricParts(row, state, false).plain;
     }
 
-    // 《文明 6》式城镇名牌：按当前已开启的多个图层开关自动组合呈现，绝不重复！
-    function buildCivBanner(row, px, py, state, k, reserve, forceReserve) {
+    // 《文明 6》式城镇名牌：按当前已开启的多个图层开关自动组合呈现（支持 V5 推荐分胶囊 + Top 3 皇冠标），绝不重复！
+    function buildCivBanner(row, px, py, state, k, reserve, forceReserve, topRank = 0) {
       const pl = row.plate;
       const L = activeLayers(state);
       const active = pl.id === state.selectedPlateId;
@@ -268,14 +272,19 @@
       const isPrem = row.premium?.status === 'premium';
       const isOpp = row.arbitrage.status === 'opportunity';
       const isWalk = row.premium?.status === 'direct';
-      const affOnlyMode = state.housingTrack === 'affordable' || (L.affordable && !L.rent && !L.commute && !L.trend && !L.premium && !L.density);
+      const affOnlyMode = state.housingTrack === 'affordable' || (L.affordable && !L.score && !L.rent && !L.commute && !L.trend && !L.premium && !L.density);
+
+      const showScore = !affOnlyMode && L.score && row.eligible && row.fit?.total != null;
+      const scVal = showScore ? row.fit.total : null;
+      const scTxt = showScore ? `${row.fit.verified ? '✓' : ''}${scVal}分` : '';
+      const scW = showScore ? Math.ceil(textWidth(scTxt, 9.2) + 8) : 0;
 
       const nameStr = (saved ? '★' : '') + pl.name;
       const metricObj = primaryMetricParts(row, state, active);
       const headRight = metricObj.plain;
       const nameW = textWidth(nameStr, 11);
       const rightW = headRight ? textWidth(headRight, 10) + 9 : 0;
-      const headW = Math.ceil(nameW + rightW + 16);
+      const headW = Math.ceil(nameW + (showScore ? scW + 5 : 0) + rightW + 16);
       const headH = 19;
 
       const shownOpp = headRight.includes('捡漏');
@@ -283,12 +292,12 @@
       const shownWalk = headRight.includes('步行');
       const wantDensityChip = !affOnlyMode && L.density && row.density != null;
       const wantPremStrip = !affOnlyMode && L.premium && (isPrem || isOpp || isWalk);
-      const expanded = !affOnlyMode && (k >= 2.8 || active || wantPremStrip || wantDensityChip);
+      const expanded = !affOnlyMode && (k >= 3.2 || active || wantPremStrip || wantDensityChip);
 
       let statusSvg = '', statusW = 0, statusH = 0;
       if (expanded && row.eligible) {
         const items = [];
-        if (k >= 2.8 || active) {
+        if (k >= 3.2 || active) {
           const mt = formatMetroTag(pl.lines);
           if (mt) {
             items.push({ kind: 'metro', text: mt.text, dot: mt.color, w: Math.ceil(textWidth(mt.text, 9) + 14) });
@@ -303,9 +312,9 @@
           const dTxt = `人口 ${fmtDensity(row.density)}`;
           items.push({ kind: 'density', text: dTxt, bg: dp.bg, tc: dp.tc, ic: dp.ic, w: Math.ceil(textWidth(dTxt, 9) + 18) });
         }
-        if (isOpp && !shownOpp && (k >= 2.8 || active || L.premium)) items.push({ kind: 'pill', text: '↘可捡漏', bg: '#104438', tc: '#72f0c5', w: 42 });
-        if (isWalk && !shownWalk && (k >= 2.8 || active || L.premium)) items.push({ kind: 'pill', text: '可步行', bg: '#453512', tc: '#ffe08a', w: 34 });
-        if (visited && (k >= 2.8 || active)) {
+        if (isOpp && !shownOpp && (k >= 3.2 || active || L.premium)) items.push({ kind: 'pill', text: '↘可捡漏', bg: '#104438', tc: '#72f0c5', w: 42 });
+        if (isWalk && !shownWalk && (k >= 3.2 || active || L.premium)) items.push({ kind: 'pill', text: '可步行', bg: '#453512', tc: '#ffe08a', w: 34 });
+        if (visited && (k >= 3.2 || active)) {
           const vTxt = row.mastery.avgStar ? `✓${row.mastery.avgStar}` : '✓已看房';
           items.push({ kind: 'pill', text: vTxt, bg: '#174238', tc: '#92f5d1', w: Math.ceil(textWidth(vTxt, 9) + 8) });
         }
@@ -315,7 +324,7 @@
           const pTxt = `↑溢价¥${Math.round(row.premium.extra)}`;
           debuffs.push({ kind: 'pill', text: pTxt, bg: '#5c2017', tc: '#ffd5c7', w: Math.ceil(textWidth(pTxt, 9) + 8) });
         }
-        if (k >= 2.8 || active || L.risks) {
+        if (k >= 3.2 || active || L.risks) {
           for (const rk of row.risks) {
             const rt = eventTypeFor(rk);
             if (state.riskFilter && state.riskFilter !== rt) continue;
@@ -399,27 +408,46 @@
           `<text class="no-stroke" x="${(ctaW / 2).toFixed(1)}" y="11.6" text-anchor="middle" fill="#0d2220" font-size="9.5" font-weight="800">${ctaTxt}</text></g>`;
       }
 
-      // 重要异动 / 重大事件「!」感叹号警示徽章（如石岩暴涨 +25.5%、新线通车、大跌回调等）
+      // 仅对真正显著的价格暴涨/大跌异动（priority >= 2，如石岩暴涨 +25.5%）挂「!」，避免普通消息刷屏导致视觉疲劳
       let alertBadge = '';
       const showAlerts = !affOnlyMode && (state.mapFilter?.majorAlerts !== false);
-      if (showAlerts && row.eligible && row.alerts?.length) {
-        const top = row.alerts[0];
+      const topAlert = row.alerts?.find(a => a.priority >= 2);
+      if (showAlerts && row.eligible && topAlert) {
+        const top = topAlert;
         const aFill = top.level === 'surge' ? '#e04f35' : top.level === 'drop' ? '#1c9e79' : '#e6b33c';
         const aStroke = top.level === 'surge' ? '#fff0d6' : top.level === 'drop' ? '#d4fff0' : '#fff7d4';
         const aInk = top.level === 'event' ? '#132622' : '#ffffff';
-        const pulse = top.priority >= 3 ? `<circle class="alert-pulse-ring" r="10.5" fill="none" stroke="${aFill}" stroke-width="1.4"/>` : '';
+        const pulse = top.priority >= 3 ? `<circle class="alert-pulse-ring" r="10" fill="none" stroke="${aFill}" stroke-width="1.3"/>` : '';
         alertBadge = `<g class="alert-badge alert-${top.level}" transform="translate(${(totalW - 1).toFixed(1)} 1)" pointer-events="none">` +
           pulse +
-          `<circle r="6.8" fill="${aFill}" stroke="${aStroke}" stroke-width="1.2"/>` +
-          `<text class="no-stroke" x="0" y="3.5" text-anchor="middle" fill="${aInk}" font-size="10.2" font-weight="900">!</text>` +
+          `<circle r="6.2" fill="${aFill}" stroke="${aStroke}" stroke-width="1.1"/>` +
+          `<text class="no-stroke" x="0" y="3.3" text-anchor="middle" fill="${aInk}" font-size="9.5" font-weight="900">!</text>` +
           `<title>${esc(top.title)}</title></g>`;
       }
 
-      return `<g class="civ-banner" data-plate="${esc(pl.id)}" role="button" tabindex="0" aria-label="${esc(pl.name + '片区 · ' + headRight)}" transform="translate(${bx.toFixed(1)} ${by.toFixed(1)})">` +
+      let scorePill = '';
+      if (showScore) {
+        const scX = 7 + nameW + 4;
+        const scBg = active ? '#123e35' : scVal >= 82 ? '#145946' : scVal >= 72 ? '#1b4e54' : scVal >= 60 ? '#594216' : '#5c261e';
+        const scTc = active ? '#c7ffe8' : scVal >= 82 ? '#98ffd8' : scVal >= 72 ? '#a4f2e8' : scVal >= 60 ? '#ffe299' : '#ffcabd';
+        scorePill = `<rect class="score-pill" x="${scX.toFixed(1)}" y="3" width="${scW}" height="13" rx="3.5" fill="${scBg}"/>` +
+          `<text class="no-stroke" x="${(scX + scW / 2).toFixed(1)}" y="12.2" text-anchor="middle" fill="${scTc}" font-size="9.2" font-weight="800">${esc(scTxt)}</text>`;
+      }
+
+      let rankCrown = '';
+      if (showScore && topRank >= 1 && topRank <= 3) {
+        const cBg = topRank === 1 ? '#ffd86b' : topRank === 2 ? '#dde9e7' : '#dfa974';
+        rankCrown = `<g class="rank-crown" transform="translate(-4 -7)" pointer-events="none">` +
+          `<rect x="0" y="0" width="20" height="11.5" rx="5.75" fill="${cBg}" stroke="#0d2220" stroke-width="1"/>` +
+          `<text class="no-stroke" x="10" y="8.6" text-anchor="middle" fill="#0d2220" font-size="8.2" font-weight="900">#${topRank}</text></g>`;
+      }
+
+      return `<g class="civ-banner" data-plate="${esc(pl.id)}" role="button" tabindex="0" aria-label="${esc(pl.name + '片区' + (scTxt ? ' · ' + scTxt : '') + (headRight ? ' · ' + headRight : ''))}" transform="translate(${bx.toFixed(1)} ${by.toFixed(1)})">` +
         `<rect x="0" y="0" width="${totalW}" height="${headH}" rx="5" fill="${headBg}" stroke="${borderCol}" stroke-width="${active ? 1.6 : 0.85}"/>` +
         `<text class="no-stroke" x="7" y="13" fill="${nameCol}" font-size="11" font-weight="${active ? 750 : 650}">${esc(nameStr)}</text>` +
+        scorePill +
         (headRight ? `<text class="no-stroke" x="${(totalW - 6).toFixed(1)}" y="12.8" text-anchor="end" fill="${rightCol}" font-size="10" font-weight="700">${metricObj.svg}</text>` : '') +
-        statusBar + alertBadge + mapDestBtn + `</g>`;
+        statusBar + rankCrown + alertBadge + mapDestBtn + `</g>`;
     }
 
     const MACRO_META = {
@@ -431,7 +459,7 @@
       density:   { title: '人口密度(区级·万人/km²)', cuts: DIST_DENSITY_CUTS, colors: DENSITY_COLORS, labels: ['低密 <0.5万', '适中 0.5–1.0万', '较密 1.0–1.3万', '高密 ≥1.3万'], val: d => d.density ?? null, fmt: v => `人口 ${fmtDensity(v)}` },
     };
 
-    const FILL_LABELS = { rent: '按租金', commute: '按通勤', trend: '按涨跌', premium: '按捡漏/避贵', affordable: '按保租房', density: '按人口' };
+    const FILL_LABELS = { score: '按推荐分', rent: '按租金', commute: '按通勤', trend: '按涨跌', premium: '按捡漏/避贵', affordable: '按保租房', density: '按人口' };
 
     function legendMarkup(state) {
       const stop = (color, text) => `<span class="legend-item"><i class="legend-swatch" style="background:${color}"></i>${esc(text)}</span>`;
@@ -445,7 +473,7 @@
       const mf = state.mapFilter || { terrain: true, neutralEvents: true };
       const pool = state.housingTrack === 'affordable'
         ? ['affordable', 'commute'].filter(k => L[k])
-        : ['rent', 'commute', 'trend', 'premium', 'density'].filter(k => L[k]);
+        : ['score', 'rent', 'commute', 'trend', 'premium', 'density'].filter(k => L[k]);
       const fillSel = pool.length >= 2
         ? `<label class="legend-item">底色 <select class="legend-fill-sel" data-fill-select aria-label="地图底色着色维度">${pool.map(k =>
             `<option value="${k}"${fm === k ? ' selected' : ''}>${FILL_LABELS[k] || k}</option>`
@@ -458,6 +486,14 @@
         ? '<span class="legend-item" style="color:#a6dcf5;font-weight:650">· 街道人口密度</span>' +
           stop(DENSITY_COLORS[0], '<0.8万') + stop(DENSITY_COLORS[1], '0.8–1.5万') + stop(DENSITY_COLORS[2], '1.5–2.2万') + stop(DENSITY_COLORS[3], '≥2.2万/km²')
         : '';
+      if (fm === 'score') {
+        const profNames = { balanced: '均衡', commute: '通勤', value: '省钱', quality: '品质', custom: '自定义' };
+        const profLbl = profNames[state.profile] || '均衡';
+        const sqmHint = (L.rent && state.sqm > 0) ? `<span class="legend-item" style="color:#ffea9f;font-weight:700">· 按 ${state.sqm}㎡ 估月租</span>` : '';
+        return fillSel + `<span class="legend-item" style="color:#98ffd8;font-weight:700">综合推荐分(${esc(profLbl)})</span>` +
+          stop(SCORE_COLORS[0], '<60') + stop(SCORE_COLORS[1], '60–71') + stop(SCORE_COLORS[2], '72–81') + stop(SCORE_COLORS[3], '≥82') +
+          sqmHint + ringNote + densityInline;
+      }
       if (fm === 'commute') {
         const peakTag = state.peak ? '<span class="legend-item" style="color:#f5c573;font-weight:700">早高峰估算</span>' : '';
         return fillSel + peakTag + stop(COMMUTE_COLORS[0], '<25分') + stop(COMMUTE_COLORS[1], '25–39') + stop(COMMUTE_COLORS[2], '40–59') + stop(COMMUTE_COLORS[3], '≥60') +
@@ -494,6 +530,7 @@
     }
 
     function renderMacro(state) {
+      lastGeoEval = null; lastGeoKey = '';
       const view = camera.viewport(), { w, h, k, tx, ty, pt } = view;
       const m = MACRO_META[state.macroMetric] || MACRO_META.community;
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
@@ -523,6 +560,7 @@
     }
 
     function renderRadial(state, evalResult) {
+      lastGeoEval = null; lastGeoKey = '';
       const dest = evalResult.dest1;
       const rect = svg.getBoundingClientRect();
       const w = rect.width || 1100, h = rect.height || 660;
@@ -595,114 +633,125 @@
       const focusedPlateId = state.selectedPlateId || (activeAff ? activeAff.project.plateId : '');
       const focusedRow = focusedPlateId ? evalResult.plateRowById.get(focusedPlateId) : null;
       const aura = state.selectedLandmarkId ? engine.landmarkAura(state.selectedLandmarkId) : null;
-
-      const clipPathById = new Map(atlas.streetClips.map(c => [c.id, c.p]));
-      const clipsMarkup = atlas.streetClips.map(c => `<clipPath id="${esc(c.id)}"><path d="${c.p}"/></clipPath>`).join('');
-      let selFilterMarkup = '';
-      if (focusedRow) {
-        const fx0 = (-tx - 30) / k, fy0 = (-ty - 30) / k;
-        const fw = (w + 60) / k, fh = (h + 60) / k;
-        selFilterMarkup = `<filter id="v3-sel-glow" filterUnits="userSpaceOnUse" x="${fmt(fx0)}" y="${fmt(fy0)}" width="${fmt(fw)}" height="${fmt(fh)}" color-interpolation-filters="sRGB">` +
-          `<feMorphology in="SourceAlpha" operator="dilate" radius="${(2.6 / k).toFixed(3)}" result="dil"/>` +
-          `<feFlood flood-color="#ffe985" flood-opacity="1" result="gold"/>` +
-          `<feComposite in="gold" in2="dil" operator="in" result="ring"/>` +
-          `<feGaussianBlur in="ring" stdDeviation="${(4.0 / k).toFixed(3)}" result="glow"/>` +
-          `<feMerge><feMergeNode in="glow"/><feMergeNode in="ring"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
-      }
-      const parts = [
-        `<defs>` +
-          `<pattern id="v3-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="scale(${1 / k})"><rect width="7" height="7" fill="#263d41"/><path d="M-1 1L1 -1M0 7L7 0M6 8L8 6" stroke="#456160" stroke-width=".9"/></pattern>` +
-          `<marker id="v3-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1.5L8.5 5L1 8.5Z" fill="#ffd482"/></marker>` +
-          selFilterMarkup + clipsMarkup +
-        `</defs>`,
-        `<g class="v3-geo" data-zoom-tier="${tierForZoom(k)}" data-base-k="${k}" data-base-tx="${tx}" data-base-ty="${ty}" transform="translate(${fmt(tx)} ${fmt(ty)}) scale(${k})">`,
-      ];
-
-      // 1. 行政区底轮廓
-      for (const d of atlas.districts) {
-        parts.push(`<path d="${d.p}" fill="#172d31" stroke="#30494c" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-      }
-
-      // 2. 全城 98 块无缝居住板块拼图（先画未选中底块并柔化内部切缝；选中板块置顶用精确剪裁外发光轮廓，彻底杜绝穿屏异线！）
-      const byClip = new Map(), unclipped = [];
-      for (const row of evalResult.plateRows) {
-        if (row.plate.id === focusedPlateId) continue;
-        if (row.plate.clipId) {
-          if (!byClip.has(row.plate.clipId)) byClip.set(row.plate.clipId, []);
-          byClip.get(row.plate.clipId).push(row);
-        } else unclipped.push(row);
-      }
-
-      const drawPlatePath = row => {
-        const pl = row.plate;
-        const inAuraWalk = aura?.walk15.has(pl.id);
-        const inAura30 = aura?.rail30.has(pl.id);
-        const dimmed = Boolean(focusedPlateId) || (aura && !inAura30 && !inAuraWalk);
-        const fill = plateFill(row, state) || 'url(#v3-hatch)';
-        const strokeCol = inAuraWalk ? '#ffda78' : inAura30 ? '#78e6ce' : (pl.clipId ? 'rgba(12,28,32,0.36)' : '#12282d');
-        const strokeW = inAuraWalk ? 2.2 : inAura30 ? 1.6 : (pl.clipId ? 0.85 : 0.9);
-        const metric = primaryMetric(row, state);
-        const aria = `${pl.district}·${pl.name}板块${metric ? ' · ' + metric : ''}`;
-        return `<path class="plate-shape" data-plate="${esc(pl.id)}" role="button" tabindex="0" aria-label="${esc(aria)}" d="${pl.p}" fill="${fill}" fill-opacity="${dimmed ? '0.34' : '1'}" fill-rule="evenodd" stroke="${strokeCol}" stroke-width="${strokeW}" vector-effect="non-scaling-stroke"/>`;
-      };
-
-      for (const row of unclipped) parts.push(drawPlatePath(row));
-      for (const [clipId, rows] of byClip) {
-        parts.push(`<g clip-path="url(#${esc(clipId)})">${rows.map(drawPlatePath).join('')}</g>`);
-        const parentD = clipPathById.get(clipId);
-        if (parentD) parts.push(`<path d="${parentD}" fill="none" stroke="#10252a" stroke-width="1.15" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-      }
-
-      // 3. 自然地形雕琢（受「地图物体 · 山体与水库」筛选开关控制）
       const mf = state.mapFilter || { hub: true, mall: true, transit: true, terrain: true, neutralEvents: true };
-      if (mf.terrain !== false) {
-        for (const m of atlas.terrain.mountains) {
-          parts.push(`<path class="terrain-mtn" d="${m.p}" fill="#1b4639" fill-opacity="0.76" stroke="#2c6352" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-        }
-        for (const wt of atlas.terrain.water) {
-          parts.push(`<path class="terrain-water" d="${wt.p}" fill="#163c4f" fill-opacity="0.72" stroke="#275e78" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-        }
-        if (atlas.terrain.airport) {
-          parts.push(`<path d="${atlas.terrain.airport.p}" fill="#2b424c" fill-opacity="0.78" stroke="#5f8496" stroke-dasharray="3 2" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-        }
-      }
-
-      // 4. 地铁底网极度克制：仅在开启「通勤」图层或近景放大(k>=2.6)时以极淡线条辅助
       const L = activeLayers(state);
-      if (L.commute || k >= 2.6) {
-        const metroAlpha = L.commute ? 0.14 : 0.09;
-        parts.push(`<g class="metro-skeleton" fill="none" stroke="rgba(210,236,228,${metroAlpha})" stroke-width="${L.commute ? 0.85 : 0.75}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none">`);
-        for (const line of atlas.metroLines) parts.push(`<path d="${line.p}" vector-effect="non-scaling-stroke"/>`);
-        parts.push('</g>');
-      }
 
-      // 5. 置顶渲染【当前选中片区】：剪裁后的真实边界外沿发光 + 暖金提亮
-      if (focusedRow) {
-        const fpl = focusedRow.plate;
-        const fFill = plateFill(focusedRow, state) || '#2f585e';
-        const fMetric = primaryMetric(focusedRow, state);
-        const fAria = `${fpl.district}·${fpl.name}片区${fMetric ? ' · ' + fMetric : ''}`;
-        const inner = `<path class="plate-shape plate-selected" data-plate="${esc(fpl.id)}" role="button" tabindex="0" aria-label="${esc(fAria)}" d="${fpl.p}" fill="${fFill}" fill-rule="evenodd" stroke="none"/>` +
-          `<path d="${fpl.p}" fill="#fff7d0" fill-opacity="0.22" fill-rule="evenodd" stroke="none" pointer-events="none"/>`;
-        parts.push(`<g class="plate-selected-wrap" filter="url(#v3-sel-glow)">${fpl.clipId ? `<g clip-path="url(#${esc(fpl.clipId)})">${inner}</g>` : inner}</g>`);
-      }
+      // 静动分层：平移缩放停稳时若底图颜色/选中态/地形显隐未变，完全复用常驻 .v3-geo DOM，只刷新轻量标牌层（速度提升 10–15 倍！）
+      const showMetro = !!(L.commute || k >= 2.6);
+      const geoKey = [
+        state.fillLayer, state.housingTrack, state.affFilter, state.trendKind,
+        state.sqm, state.budget, state.profile, focusedPlateId, state.selectedLandmarkId,
+        mf.terrain !== false, L.commute, L.premium, showMetro, (state.usedHubs || []).join(','),
+      ].join('|');
+      const existingGeo = typeof svg.querySelector === 'function' ? svg.querySelector('.v3-geo') : null;
+      const existingOv = typeof svg.querySelector === 'function' ? svg.querySelector('.v3-overlay') : null;
+      const reuseGeo = Boolean(existingGeo && existingOv && lastGeoEval === evalResult && lastGeoKey === geoKey);
 
-      // 6. 15 分钟步行圈（地标选中时显示单地标亮圈；市场房开启「议价」图层时显示 10 大园区步行圈）
-      if (aura) {
-        const [lx, ly] = project(aura.landmark.coord);
-        parts.push(`<circle class="landmark-aura-ring" cx="${fmt(lx)}" cy="${fmt(ly)}" r="${fmt(walkRadiusMapUnits)}" fill="rgba(120,230,206,0.16)" stroke="#78e6ce" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
-      } else if (state.housingTrack !== 'affordable' && L.premium && evalResult.dest1 && engine.hubNodes?.length) {
-        const usedSet = new Set(state.usedHubs || []);
-        for (const hub of engine.hubNodes) {
-          const [hx, hy] = project(hub.coord);
-          const isOwn = hub.name === evalResult.dest1.name || hub.name === evalResult.dest2?.name;
-          const isUsed = usedSet.has(hub.name);
-          const fill = isOwn ? 'rgba(255,218,120,0.13)' : isUsed ? 'rgba(100,204,169,0.10)' : 'rgba(226,125,96,0.11)';
-          const stroke = isOwn ? '#ffda78' : isUsed ? '#68d6b2' : '#e28363';
-          parts.push(`<circle cx="${fmt(hx)}" cy="${fmt(hy)}" r="${fmt(walkRadiusMapUnits)}" fill="${fill}" stroke="${stroke}" stroke-width="${isOwn ? 1.8 : 1.25}" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+      let geoPrefixParts = null;
+      if (!reuseGeo) {
+        const clipPathById = new Map((atlas.streetClips || []).map(c => [c.id, c.p]));
+        const clipsMarkup = (atlas.streetClips || []).map(c => `<clipPath id="${esc(c.id)}"><path d="${c.p}"/></clipPath>`).join('');
+        const parts = [
+          `<defs>` +
+            `<pattern id="v3-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="scale(0.5)"><rect width="7" height="7" fill="#263d41"/><path d="M-1 1L1 -1M0 7L7 0M6 8L8 6" stroke="#456160" stroke-width=".9"/></pattern>` +
+            `<marker id="v3-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1.5L8.5 5L1 8.5Z" fill="#ffd482"/></marker>` +
+            clipsMarkup +
+          `</defs>`,
+          `<g class="v3-geo" data-zoom-tier="${tierForZoom(k)}" data-base-k="${k}" data-base-tx="${tx}" data-base-ty="${ty}" transform="matrix(${k.toFixed(5)} 0 0 ${k.toFixed(5)} ${fmt(tx)} ${fmt(ty)})">`,
+        ];
+
+        // 1. 行政区底轮廓
+        for (const d of atlas.districts) {
+          parts.push(`<path d="${d.p}" fill="#172d31" stroke="#30494c" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
         }
+
+        // 2. 全城 117 块预裁剪无缝居住板块拼图（零运行时 clipPath 蒙版！）
+        const byClip = new Map(), unclipped = [];
+        for (const row of evalResult.plateRows) {
+          if (row.plate.id === focusedPlateId) continue;
+          if (row.plate.clipId) {
+            if (!byClip.has(row.plate.clipId)) byClip.set(row.plate.clipId, []);
+            byClip.get(row.plate.clipId).push(row);
+          } else unclipped.push(row);
+        }
+
+        const drawPlatePath = row => {
+          const pl = row.plate;
+          const inAuraWalk = aura?.walk15.has(pl.id);
+          const inAura30 = aura?.rail30.has(pl.id);
+          const dimmed = Boolean(focusedPlateId) || (aura && !inAura30 && !inAuraWalk);
+          const fill = plateFill(row, state) || 'url(#v3-hatch)';
+          const isSub = Boolean(pl.subdivided || pl.clipId);
+          const strokeCol = inAuraWalk ? '#ffda78' : inAura30 ? '#78e6ce' : (isSub ? 'rgba(12,28,32,0.42)' : '#12282d');
+          const strokeW = inAuraWalk ? 2.2 : inAura30 ? 1.6 : (isSub ? 0.85 : 0.9);
+          const metric = primaryMetric(row, state);
+          const aria = `${pl.district}·${pl.name}板块${metric ? ' · ' + metric : ''}`;
+          return `<path class="plate-shape" data-plate="${esc(pl.id)}" role="button" tabindex="0" aria-label="${esc(aria)}" d="${pl.p}" fill="${fill}" fill-opacity="${dimmed ? '0.34' : '1'}" fill-rule="evenodd" stroke="${strokeCol}" stroke-width="${strokeW}" vector-effect="non-scaling-stroke"/>`;
+        };
+
+        for (const row of unclipped) parts.push(drawPlatePath(row));
+        for (const [clipId, rows] of byClip) {
+          parts.push(`<g clip-path="url(#${esc(clipId)})">${rows.map(drawPlatePath).join('')}</g>`);
+          const parentD = clipPathById.get(clipId);
+          if (parentD) parts.push(`<path d="${parentD}" fill="none" stroke="#10252a" stroke-width="1.15" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+        }
+
+        // 3. 自然地形雕琢（受「地图物体 · 山体与水库」筛选开关控制）
+        if (mf.terrain !== false) {
+          for (const m of atlas.terrain.mountains) {
+            parts.push(`<path class="terrain-mtn" d="${m.p}" fill="#1b4639" fill-opacity="0.76" stroke="#2c6352" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+          }
+          for (const wt of atlas.terrain.water) {
+            parts.push(`<path class="terrain-water" d="${wt.p}" fill="#163c4f" fill-opacity="0.72" stroke="#275e78" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+          }
+          if (atlas.terrain.airport) {
+            parts.push(`<path d="${atlas.terrain.airport.p}" fill="#2b424c" fill-opacity="0.78" stroke="#5f8496" stroke-dasharray="3 2" stroke-width="0.9" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+          }
+        }
+
+        // 4. 地铁底网极度克制：仅在开启「通勤」图层或近景放大(k>=2.6)时以极淡线条辅助
+        if (showMetro) {
+          const metroAlpha = L.commute ? 0.14 : 0.09;
+          parts.push(`<g class="metro-skeleton" fill="none" stroke="rgba(210,236,228,${metroAlpha})" stroke-width="${L.commute ? 0.85 : 0.75}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none">`);
+          for (const line of atlas.metroLines) parts.push(`<path d="${line.p}" vector-effect="non-scaling-stroke"/>`);
+          parts.push('</g>');
+        }
+
+        // 5. 置顶渲染【当前选中片区】：纯矢量多层暖金外发光描边（彻底淘汰全屏 CPU 杀手滤镜 feMorphology/feGaussianBlur！）
+        if (focusedRow) {
+          const fpl = focusedRow.plate;
+          const fFill = plateFill(focusedRow, state) || '#2f585e';
+          const fMetric = primaryMetric(focusedRow, state);
+          const fAria = `${fpl.district}·${fpl.name}片区${fMetric ? ' · ' + fMetric : ''}`;
+          const glowPaths =
+            `<path d="${fpl.p}" fill="none" fill-rule="evenodd" stroke="rgba(255,233,133,0.28)" stroke-width="7.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"/>` +
+            `<path d="${fpl.p}" fill="none" fill-rule="evenodd" stroke="rgba(255,233,133,0.62)" stroke-width="3.4" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"/>` +
+            `<path class="plate-shape plate-selected" data-plate="${esc(fpl.id)}" role="button" tabindex="0" aria-label="${esc(fAria)}" d="${fpl.p}" fill="${fFill}" fill-rule="evenodd" stroke="#fff2a8" stroke-width="1.6" vector-effect="non-scaling-stroke"/>` +
+            `<path d="${fpl.p}" fill="#fff7d0" fill-opacity="0.20" fill-rule="evenodd" stroke="none" pointer-events="none"/>`;
+          parts.push(`<g id="v3-sel-glow" class="plate-selected-wrap">${fpl.clipId ? `<g clip-path="url(#${esc(fpl.clipId)})">${glowPaths}</g>` : glowPaths}</g>`);
+        }
+
+        // 6. 15 分钟步行圈（地标选中时显示单地标亮圈；市场房开启「议价」图层时显示 10 大园区步行圈）
+        if (aura) {
+          const [lx, ly] = project(aura.landmark.coord);
+          parts.push(`<circle class="landmark-aura-ring" cx="${fmt(lx)}" cy="${fmt(ly)}" r="${fmt(walkRadiusMapUnits)}" fill="rgba(120,230,206,0.16)" stroke="#78e6ce" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+        } else if (state.housingTrack !== 'affordable' && L.premium && evalResult.dest1 && engine.hubNodes?.length) {
+          const usedSet = new Set(state.usedHubs || []);
+          for (const hub of engine.hubNodes) {
+            const [hx, hy] = project(hub.coord);
+            const isOwn = hub.name === evalResult.dest1.name || hub.name === evalResult.dest2?.name;
+            const isUsed = usedSet.has(hub.name);
+            const fill = isOwn ? 'rgba(255,218,120,0.13)' : isUsed ? 'rgba(100,204,169,0.10)' : 'rgba(226,125,96,0.11)';
+            const stroke = isOwn ? '#ffda78' : isUsed ? '#68d6b2' : '#e28363';
+            parts.push(`<circle cx="${fmt(hx)}" cy="${fmt(hy)}" r="${fmt(walkRadiusMapUnits)}" fill="${fill}" stroke="${stroke}" stroke-width="${isOwn ? 1.8 : 1.25}" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`);
+          }
+        }
+        parts.push('</g><g class="v3-overlay">');
+        geoPrefixParts = parts;
       }
-      parts.push('</g><g class="v3-overlay">');
+
+      const ovParts = [];
+      const parts = ovParts;
 
       // 办公外迁走廊弧线（受「中立事件与外迁线」筛选开关控制）
       if (state.housingTrack !== 'affordable' && L.premium && mf.neutralEvents !== false && atlas.migrations?.length) {
@@ -916,18 +965,22 @@
       }
 
       // 2. 《文明 6》式城镇状态栏优先于辅助地标（保租房专场下让保租房项目标唱主角，只保留无保租房片区的参考）
-      const affOnly = state.housingTrack === 'affordable' || (L.affordable && !L.rent && !L.commute && !L.trend && !L.premium && !L.density);
+      const affOnly = state.housingTrack === 'affordable' || (L.affordable && !L.score && !L.rent && !L.commute && !L.trend && !L.premium && !L.density);
+      const topRankMap = evalResult.topRankById || new Map();
       const bannerLayer = [];
       const visPlates = affOnly
         ? evalResult.plateRows.filter(r => inView(r.plate.bounds) && plateAffList(r, state).length === 0)
         : evalResult.plateRows.filter(r => inView(r.plate.bounds));
       visPlates.sort((a, b) =>
         Number(b.plate.id === focusedPlateId) - Number(a.plate.id === focusedPlateId) ||
+        Number(topRankMap.has(b.plate.id)) - Number(topRankMap.has(a.plate.id)) ||
+        Number(b.alerts?.some(x => x.priority >= 2)) - Number(a.alerts?.some(x => x.priority >= 2)) ||
         Number(b.mastery?.visited) - Number(a.mastery?.visited) ||
         Number(b.mastery?.saved) - Number(a.mastery?.saved) ||
         Number(b.premium?.status === 'premium') - Number(a.premium?.status === 'premium') ||
         Number(b.arbitrage.status === 'opportunity') - Number(a.arbitrage.status === 'opportunity') ||
-        Number(!!b.plate.clipId) - Number(!!a.plate.clipId) ||
+        (b.fit?.total ?? 0) - (a.fit?.total ?? 0) ||
+        Number(!!(b.plate.subdivided || b.plate.clipId)) - Number(!!(a.plate.subdivided || a.plate.clipId)) ||
         (b.plate.bounds[2] - b.plate.bounds[0]) - (a.plate.bounds[2] - a.plate.bounds[0])
       );
 
@@ -938,7 +991,7 @@
         if (row.plate.id === focusedPlateId && dest1ScreenPt && Math.hypot(px - dest1ScreenPt[0], py - dest1ScreenPt[1]) < 34) {
           py = Math.min(h - 76, dest1ScreenPt[1] + 34);
         }
-        const banner = buildCivBanner(row, px, py, state, k, reserve, forceReserve);
+        const banner = buildCivBanner(row, px, py, state, k, reserve, forceReserve, topRankMap.get(row.plate.id) || 0);
         if (banner) bannerLayer.push(banner);
       }
 
@@ -1026,8 +1079,20 @@
         }
       }
 
-      parts.push(...terrainLabels, ...lmLayer, ...bannerLayer, ...affLayer, ...facLayer, ...riskLayer, ...skylinesLayer, ...destLayer, '</g>');
-      svg.innerHTML = parts.join('');
+      ovParts.push(...terrainLabels, ...lmLayer, ...bannerLayer, ...affLayer, ...facLayer, ...riskLayer, ...skylinesLayer, ...destLayer);
+      if (reuseGeo) {
+        existingGeo.dataset.zoomTier = String(tierForZoom(k));
+        existingGeo.dataset.baseK = String(k);
+        existingGeo.dataset.baseTx = String(tx);
+        existingGeo.dataset.baseTy = String(ty);
+        existingGeo.setAttribute('transform', `matrix(${k.toFixed(5)} 0 0 ${k.toFixed(5)} ${fmt(tx)} ${fmt(ty)})`);
+        existingOv.removeAttribute('transform');
+        existingOv.innerHTML = ovParts.join('');
+      } else {
+        svg.innerHTML = geoPrefixParts.join('') + ovParts.join('') + '</g>';
+        lastGeoEval = evalResult;
+        lastGeoKey = geoKey;
+      }
     }
 
     function render(payload) {

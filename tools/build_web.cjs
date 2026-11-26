@@ -16,37 +16,36 @@ const DIST_DIR = path.join(ROOT, 'dist');
 
 const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#1e293b"/>
-    </linearGradient>
-    <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#10b981"/>
-    </linearGradient>
+    <clipPath id="tile"><rect x="24" y="24" width="464" height="464" rx="108"/></clipPath>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <path d="M84 316 C128 242, 186 218, 252 214 C318 210, 384 182, 430 144 L440 248 C394 294, 344 336, 266 352 C196 366, 134 362, 84 316 Z" fill="url(#land)" opacity="0.28"/>
-  <path d="M98 308 L178 238 L254 258 L334 196 L418 214" fill="none" stroke="#38bdf8" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="178" cy="238" r="14" fill="#e0f2fe"/>
-  <circle cx="334" cy="196" r="14" fill="#e0f2fe"/>
-  <circle cx="254" cy="258" r="30" fill="#f59e0b"/>
-  <circle cx="254" cy="258" r="13" fill="#0f172a"/>
-  <text x="256" y="434" text-anchor="middle" font-family="system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="60" font-weight="700" fill="#f8fafc">深圳租房</text>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="#ebe0c5"/>
+  <g clip-path="url(#tile)">
+    <path d="M24 24H292L224 246L24 304Z" fill="#6ab06e"/>
+    <path d="M292 24H488V232L224 246Z" fill="#6cb8cf"/>
+    <path d="M24 304L224 246L344 488H24Z" fill="#a8c973"/>
+    <path d="M224 246L488 232V488H344Z" fill="#e4d6b5"/>
+    <path d="M292 24L224 246M24 304L224 246L488 232M224 246L344 488" fill="none" stroke="#594834" stroke-width="10" stroke-opacity="0.32"/>
+  </g>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="none" stroke="#594834" stroke-opacity="0.22" stroke-width="8"/>
+  <g transform="translate(256 268)">
+    <path d="M0 122C-66 44 -104 -6 -104 -62C-104 -119 -57 -166 0 -166C57 -166 104 -119 104 -62C104 -6 66 44 0 122Z" fill="#1d1d1f" stroke="#fbfbf9" stroke-width="14" stroke-linejoin="round"/>
+    <path d="M-46 -46L0 -86L46 -46V2H-46Z" fill="#f2b838"/>
+    <rect x="-14" y="-32" width="28" height="34" rx="6" fill="#1d1d1f"/>
+  </g>
 </svg>
 `;
 
 function buildManifest() {
   return JSON.stringify({
-    name: '深圳租房板块探索地图',
-    short_name: '深圳租房地图',
-    description: '全深圳 117 块居住片区拼图、平峰/早高峰通勤时间圈、多信源租金与官方保租房探索地图',
+    name: '租房地图 · 深圳',
+    short_name: '租房地图',
+    description: '全深圳 117 片区探索地图、早高峰通勤估时、个性推荐分与一房一卡看房 PK',
     start_url: './',
     scope: './',
     display: 'standalone',
     orientation: 'any',
-    background_color: '#0f172a',
-    theme_color: '#0f172a',
+    background_color: '#ebe0c5',
+    theme_color: '#ebe0c5',
     lang: 'zh-CN',
     icons: [
       {
@@ -146,7 +145,44 @@ function buildHeadersFile() {
 
 /manifest.webmanifest
   Cache-Control: public, max-age=86400
+
+/chunk-bus.json
+  Cache-Control: public, max-age=86400
+
+/chunk-drive.json
+  Cache-Control: public, max-age=86400
 `;
+}
+
+// 线上 PWA 拆包：将公交全网与驾车矩阵拆分为同源懒加载块（点「公交/驾车」时才按需拉取并进 SW 缓存），首屏体积骤降 75%！
+function extractWebChunks(webHtml) {
+  const marker = '<script type="application/json" id="journey-data">';
+  const start = webHtml.indexOf(marker);
+  if (start < 0) return { html: webHtml, chunks: {} };
+  const bodyStart = start + marker.length;
+  const end = webHtml.indexOf('</script>', bodyStart);
+  if (end < 0) return { html: webHtml, chunks: {} };
+
+  const journey = JSON.parse(webHtml.slice(bodyStart, end));
+  const chunks = {};
+  if (journey.bus?.gz) {
+    chunks['chunk-bus.json'] = zlib.gunzipSync(Buffer.from(journey.bus.gz, 'base64')).toString('utf8');
+    journey.bus = { chunk: './chunk-bus.json' };
+  }
+  if (journey.driving?.packed?.gz) {
+    const rawDur = zlib.gunzipSync(Buffer.from(journey.driving.packed.durations, 'base64')).toString('base64');
+    const rawDist = zlib.gunzipSync(Buffer.from(journey.driving.packed.distances, 'base64')).toString('base64');
+    const driveObj = {
+      ...journey.driving,
+      packed: { n: journey.driving.packed.n, durations: rawDur, distances: rawDist },
+    };
+    chunks['chunk-drive.json'] = JSON.stringify(driveObj);
+    journey.driving = { chunk: './chunk-drive.json' };
+  }
+  if (!Object.keys(chunks).length) return { html: webHtml, chunks };
+  const slimJourney = JSON.stringify(journey).replace(/</g, '\\u003c');
+  const html = webHtml.slice(0, bodyStart) + slimJourney + webHtml.slice(end);
+  return { html, chunks };
 }
 
 function enhanceHtmlForWeb(rawHtml) {
@@ -164,17 +200,16 @@ function enhanceHtmlForWeb(rawHtml) {
     }
   );
 
-  const pwaHead = [
-    '<meta name="theme-color" content="#0f172a">',
-    '<meta name="apple-mobile-web-app-capable" content="yes">',
-    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
-    '<meta name="apple-mobile-web-app-title" content="深圳租房地图">',
-    '<link rel="manifest" href="./manifest.webmanifest">',
-    '<link rel="icon" type="image/svg+xml" href="./icon.svg">',
-  ].join('\n');
+  const pwaLines = [];
+  if (!/name="theme-color"/i.test(out)) pwaLines.push('<meta name="theme-color" content="#ebe0c5">');
+  if (!/name="apple-mobile-web-app-capable"/i.test(out)) pwaLines.push('<meta name="apple-mobile-web-app-capable" content="yes">');
+  if (!/name="apple-mobile-web-app-status-bar-style"/i.test(out)) pwaLines.push('<meta name="apple-mobile-web-app-status-bar-style" content="default">');
+  if (!/name="apple-mobile-web-app-title"/i.test(out)) pwaLines.push('<meta name="apple-mobile-web-app-title" content="租房地图">');
+  if (!out.includes('rel="manifest"')) pwaLines.push('<link rel="manifest" href="./manifest.webmanifest">');
+  if (!out.includes('rel="icon"')) pwaLines.push('<link rel="icon" type="image/svg+xml" href="./icon.svg">');
 
-  if (!out.includes('rel="manifest"')) {
-    out = out.replace('</head>', `${pwaHead}\n</head>`);
+  if (pwaLines.length) {
+    out = out.replace('</head>', `${pwaLines.join('\n')}\n</head>`);
   }
 
   const swBoot = `<script>
@@ -232,7 +267,7 @@ function buildWeb({ sourceHtmlPath = SOURCE_HTML, outDir = DIST_DIR, check = fal
   }
   const rawHtml = fs.readFileSync(sourceHtmlPath, 'utf8');
   const versionHash = crypto.createHash('sha256').update(rawHtml).digest('hex').slice(0, 10);
-  const webHtml = enhanceHtmlForWeb(rawHtml);
+  const { html: webHtml, chunks } = extractWebChunks(enhanceHtmlForWeb(rawHtml));
   const manifest = buildManifest();
   const sw = buildServiceWorker(versionHash);
   const headers = buildHeadersFile();
@@ -240,6 +275,7 @@ function buildWeb({ sourceHtmlPath = SOURCE_HTML, outDir = DIST_DIR, check = fal
 
   const files = {
     'index.html': webHtml,
+    ...chunks,
     'manifest.webmanifest': manifest,
     'icon.svg': ICON_SVG,
     'sw.js': sw,

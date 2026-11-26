@@ -80,11 +80,213 @@ const lonScale = (eastSt[1] - westSt[1]) / (eastSt[3][0] - westSt[3][0]);
 const RAD = Math.PI / 180;
 const merc = lat => Math.log(Math.tan(Math.PI / 4 + lat * RAD / 2));
 const invMerc = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) / RAD;
+const round1 = n => Number(n.toFixed(1));
 const round2 = n => Number(n.toFixed(2));
 const project = ll => [
   round2(westSt[1] + (ll[0] - westSt[3][0]) * lonScale),
   round2(westSt[2] - (merc(ll[1]) - merc(westSt[3][1])) * lonScale / RAD),
 ];
+
+// 解析纯 M/L/Z SVG 路径为闭合点环数组
+function parseSvgRings(d) {
+  if (!d) return [];
+  return String(d).split('Z').map(seg => seg.trim()).filter(Boolean).map(seg => {
+    const pts = seg.replace(/^M/, '').split('L').map(pair => {
+      const [x, y] = pair.split(',').map(Number);
+      return [x, y];
+    }).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-6) {
+      pts.pop();
+    }
+    return pts;
+  }).filter(r => r.length >= 3);
+}
+
+// 经典 Ramer–Douglas–Peucker 折线抽稀（保留地标拓扑转折，过滤亚像素级冗余点）
+function rdpChain(pts, eps) {
+  if (pts.length <= 2) return pts.slice();
+  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1];
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let maxD2 = -1, idx = -1;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const px = pts[i][0] - ax, py = pts[i][1] - ay;
+    let d2;
+    if (len2 < 1e-12) {
+      d2 = px * px + py * py;
+    } else {
+      const t = Math.max(0, Math.min(1, (px * dx + py * dy) / len2));
+      const ex = px - t * dx, ey = py - t * dy;
+      d2 = ex * ex + ey * ey;
+    }
+    if (d2 > maxD2) { maxD2 = d2; idx = i; }
+  }
+  if (maxD2 > eps * eps && idx > 0) {
+    const left = rdpChain(pts.slice(0, idx + 1), eps);
+    const right = rdpChain(pts.slice(idx), eps);
+    return left.slice(0, -1).concat(right);
+  }
+  return [pts[0], pts[pts.length - 1]];
+}
+
+function simplifyRing(ring, eps = 0.22) {
+  if (ring.length <= 4) return ring.slice();
+  let farIdx = 1, maxD2 = -1;
+  for (let i = 1; i < ring.length; i++) {
+    const d2 = (ring[i][0] - ring[0][0]) ** 2 + (ring[i][1] - ring[0][1]) ** 2;
+    if (d2 > maxD2) { maxD2 = d2; farIdx = i; }
+  }
+  const c1 = rdpChain(ring.slice(0, farIdx + 1), eps);
+  const c2 = rdpChain(ring.slice(farIdx).concat([ring[0]]), eps);
+  const out = c1.slice(0, -1).concat(c2.slice(0, -1));
+  return out.length >= 3 ? out : ring.slice();
+}
+
+function polyAbsArea(ring) {
+  let s = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    s += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+  }
+  return Math.abs(s) * 0.5;
+}
+
+function ringsToSvgPath(rings) {
+  return rings
+    .filter(r => r.length >= 3 && polyAbsArea(r) >= 0.04)
+    .map(r => 'M' + r.map(p => `${round1(p[0])},${round1(p[1])}`).join('L') + 'Z')
+    .join('');
+}
+
+function simplifySvgPolygons(d, eps = 0.22) {
+  const rings = parseSvgRings(d).map(r => simplifyRing(r, eps));
+  return ringsToSvgPath(rings) || d;
+}
+
+function simplifySvgPolyline(d, eps = 0.35) {
+  if (!d) return d;
+  const subpaths = String(d).split(/(?=M)/).map(s => s.trim()).filter(Boolean);
+  return subpaths.map(sp => {
+    const closed = sp.endsWith('Z');
+    const body = sp.replace(/^M/, '').replace(/Z$/, '');
+    const pts = body.split('L').map(pair => pair.split(',').map(Number)).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if (pts.length <= 2) return sp;
+    const simp = closed ? simplifyRing(pts, eps) : rdpChain(pts, eps);
+    return 'M' + simp.map(p => `${round1(p[0])},${round1(p[1])}`).join('L') + (closed ? 'Z' : '');
+  }).join('');
+}
+
+// 凹多边形安全的精确半平面裁剪（2-正则二分图配对法）：彻底把 U 形海岸线/凹街道一刀干净切成独立闭合环，零幽灵桥线、零运行时 clipPath！
+function clipRingByHalfPlane(ring, mx, my, dx, dy) {
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9 || ring.length < 3) return [ring];
+  const nx = dx / len, ny = dy / len;
+  const tx = -ny, ty = nx;
+  const signed = p => {
+    const v = (p[0] - mx) * nx + (p[1] - my) * ny;
+    return Math.abs(v) < 1e-7 ? 0 : v;
+  };
+  const projT = p => (p[0] - mx) * tx + (p[1] - my) * ty;
+
+  const dists = ring.map(signed);
+  let hasIn = false, hasOut = false;
+  for (const v of dists) {
+    if (v < 0) hasIn = true;
+    else if (v > 0) hasOut = true;
+  }
+  if (!hasOut) return [ring];
+  if (!hasIn) return [];
+
+  const n = ring.length;
+  const start = dists.findIndex(v => v > 0);
+  const chains = [];
+  let cur = null;
+
+  for (let step = 0; step < n; step++) {
+    const i = (start + step) % n;
+    const j = (i + 1) % n;
+    const a = ring[i], b = ring[j];
+    const da = dists[i], db = dists[j];
+
+    if (da > 0 && db <= 0) {
+      // Entering inside half-plane
+      const inter = db === 0 ? b : [a[0] + (b[0] - a[0]) * (da / (da - db)), a[1] + (b[1] - a[1]) * (da / (da - db))];
+      cur = { pts: [inter] };
+      if (db < 0) cur.pts.push(b);
+    } else if (da <= 0 && db <= 0) {
+      if (cur && db < 0) cur.pts.push(b);
+      else if (cur && db === 0) cur.pts.push(b);
+    } else if (da <= 0 && db > 0) {
+      // Exiting inside half-plane
+      if (cur) {
+        const inter = da === 0 ? a : [a[0] + (b[0] - a[0]) * (da / (da - db)), a[1] + (b[1] - a[1]) * (da / (da - db))];
+        const last = cur.pts[cur.pts.length - 1];
+        if (!last || Math.hypot(last[0] - inter[0], last[1] - inter[1]) > 1e-6) cur.pts.push(inter);
+        if (cur.pts.length >= 2) {
+          const first = cur.pts[0], end = cur.pts[cur.pts.length - 1];
+          if (Math.hypot(first[0] - end[0], first[1] - end[1]) > 1e-6 || cur.pts.length >= 3) {
+            chains.push(cur.pts);
+          }
+        }
+        cur = null;
+      }
+    }
+  }
+  if (!chains.length) return [];
+
+  // Build 2-regular graph: 2 endpoints per chain + sorted cut-line edges (2k <-> 2k+1)
+  const nodes = [];
+  chains.forEach((pts, ci) => {
+    nodes.push({ id: nodes.length, ci, end: 0, pt: pts[0], t: projT(pts[0]) });
+    nodes.push({ id: nodes.length, ci, end: 1, pt: pts[pts.length - 1], t: projT(pts[pts.length - 1]) });
+  });
+  const sorted = nodes.slice().sort((a, b) => a.t - b.t);
+  const cutPartner = new Map();
+  for (let k = 0; k + 1 < sorted.length; k += 2) {
+    cutPartner.set(sorted[k].id, sorted[k + 1].id);
+    cutPartner.set(sorted[k + 1].id, sorted[k].id);
+  }
+
+  const visited = new Set();
+  const outRings = [];
+  for (const startNode of nodes) {
+    if (visited.has(startNode.id)) continue;
+    const poly = [];
+    let u = startNode;
+    let guard = 0;
+    while (u && !visited.has(u.id) && guard++ <= nodes.length + 2) {
+      visited.add(u.id);
+      const pts = chains[u.ci];
+      const seq = u.end === 0 ? pts : pts.slice().reverse();
+      for (const p of seq) {
+        const prev = poly[poly.length - 1];
+        if (!prev || Math.hypot(prev[0] - p[0], prev[1] - p[1]) > 1e-6) poly.push(p);
+      }
+      const otherEndId = u.end === 0 ? u.id + 1 : u.id - 1;
+      visited.add(otherEndId);
+      const nextId = cutPartner.get(otherEndId);
+      u = nextId != null ? nodes[nextId] : null;
+    }
+    if (poly.length > 1 && Math.hypot(poly[0][0] - poly[poly.length - 1][0], poly[0][1] - poly[poly.length - 1][1]) < 1e-6) {
+      poly.pop();
+    }
+    if (poly.length >= 3 && polyAbsArea(poly) >= 0.04) outRings.push(poly);
+  }
+  return outRings;
+}
+
+function clipStreetByVoronoi(streetRings, seed, others) {
+  let rings = streetRings;
+  const [sx, sy] = seed;
+  for (const [ox, oy] of others) {
+    const mx = (sx + ox) / 2, my = (sy + oy) / 2;
+    const dx = ox - sx, dy = oy - sy;
+    const next = [];
+    for (const r of rings) next.push(...clipRingByHalfPlane(r, mx, my, dx, dy));
+    rings = next;
+    if (!rings.length) break;
+  }
+  return rings;
+}
 const unproject = xy => [
   Number((westSt[3][0] + (xy[0] - westSt[1]) / lonScale).toFixed(6)),
   Number(invMerc(merc(westSt[3][1]) - (xy[1] - westSt[2]) * RAD / lonScale).toFixed(6)),
@@ -231,6 +433,7 @@ function voronoiClip(rect, seed, others) {
 
 for (const s of fine.streets) {
   const split = splitByStreetId.get(s.id);
+  const simpStreetRings = parseSvgRings(s.p).map(r => simplifyRing(r, 0.36));
   if (!split) {
     const stCoord = s.stations?.[0] && stationCoords.get(s.stations[0]) ? stationCoords.get(s.stations[0]) : unproject(s.xy);
     plates.push({
@@ -241,7 +444,8 @@ for (const s of fine.streets) {
       streetId: s.id,
       streetName: s.n,
       clipId: null,
-      p: s.p,
+      subdivided: false,
+      p: ringsToSvgPath(simpStreetRings) || s.p,
       xy: s.xy,
       bounds: s.bounds,
       coord: stCoord,
@@ -253,9 +457,7 @@ for (const s of fine.streets) {
     continue;
   }
 
-  // Subdivide this large street seamlessly into exact convex Voronoi plates clipped by street.p!
-  const clipId = 'clip-' + s.id;
-  streetClips.push({ id: clipId, p: s.p });
+  // 构建期精确将大街道按 Voronoi 预裁剪为独立闭合多边形：彻底消灭运行时 30 个 <clipPath> 蒙版！
   const [bx0, by0, bx1, by1] = s.bounds;
   const pad = 6;
   const rect = [[bx0 - pad, by0 - pad], [bx1 + pad, by0 - pad], [bx1 + pad, by1 + pad], [bx0 - pad, by1 + pad]];
@@ -270,7 +472,9 @@ for (const s of fine.streets) {
   for (const item of seeds) {
     const others = seeds.filter(o => o !== item).map(o => o.seedXY);
     const poly = voronoiClip(rect, item.seedXY, others);
-    const cellPath = 'M' + poly.map(p => p.map(round2).join(',')).join('L') + 'Z';
+    const clippedRings = clipStreetByVoronoi(simpStreetRings, item.seedXY, others);
+    const cellPath = ringsToSvgPath(clippedRings);
+    if (!cellPath) throw new Error(`Pre-clipped Voronoi produced empty path for plate ${item.id}`);
 
     // Find visual interior label point inside BOTH Voronoi cell AND parent street GeoJSON!
     const px0 = Math.max(bx0, Math.min(...poly.map(p => p[0])));
@@ -311,7 +515,8 @@ for (const s of fine.streets) {
       district: s.d,
       streetId: s.id,
       streetName: s.n,
-      clipId,
+      clipId: null,
+      subdivided: true,
       p: cellPath,
       xy: labelXY,
       seedXY: item.seedXY,
@@ -699,8 +904,9 @@ const terrain = {
   airport: { id: geoSpec.airport.id, name: geoSpec.airport.name, ...smoothClosedPath(geoSpec.airport.coords) },
 };
 
-// 5. Metro skeleton (all 16 real Shenzhen Metro lines from base.json!)
-const metroLines = Object.values(base.metro || {}).map(m => ({ id: m.id, p: m.p }));
+// 5. Metro skeleton (all 16 real Shenzhen Metro lines, simplified + zero duplication with atlas.metro!)
+const metroLines = Object.values(base.metro || {}).map(m => ({ id: m.id, p: simplifySvgPolyline(m.p, 0.35) }));
+const metroGraph = (base.metro || []).map(m => ({ id: m.id, s: m.s }));
 
 // 6. Office migration corridors
 const migrations = [
@@ -760,7 +966,7 @@ const atlasV3 = {
   listingMonth: base.listingMonth ?? null,
   housingTypeMeta: corridor.housingTypeMeta,
   refSource: fine.refSource,
-  districts,
+  districts: districts.map(d => ({ ...d, p: simplifySvgPolygons(d.p, 0.42) })),
   streetClips,
   plates,
   places,
@@ -776,7 +982,7 @@ const atlasV3 = {
   policies: policiesData.policies || [],
   destinations,
   stations: base.stations,
-  metro: base.metro,
+  metro: metroGraph,
 };
 
 const outFile = path.join(ROOT, 'data', 'atlas-v3.json');

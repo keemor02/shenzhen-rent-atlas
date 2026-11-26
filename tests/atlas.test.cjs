@@ -296,6 +296,92 @@ test('V3.5 strategy map renders Civ 6 banners, Cities Skylines influence lines, 
   assert.match(fakeSvg.innerHTML, /10分/);
 });
 
+test('V5 transparent 0–100 scoring, profile weight switching, Top 3 crowns, multi-room true-cost PK & lossless backup', () => {
+  const { store, engine, ctx } = bootV3();
+  store.state.work = '留仙洞';
+  store.state.budget = 3200;
+  store.state.sqm = 35;
+
+  // 1. Every single plate gets a real 0–100 score across all 4 dimensions + Top 5 ranking
+  const resBal = engine.evaluateAll(store.state, store);
+  assert.equal(store.state.fillLayer, 'score');
+  assert.equal(resBal.topPlates.length, 5);
+  assert.equal(resBal.topRankById.size, 3);
+  for (const r of resBal.plateRows) {
+    assert.equal(r.fit.count, 4, `${r.plate.name} must score all 4 dimensions`);
+    assert.ok(r.fit.total >= 0 && r.fit.total <= 100, `${r.plate.name} fit.total must be in 0..100`);
+  }
+  assert.ok(resBal.topPlates[0].fit.total >= resBal.topPlates[4].fit.total, 'topPlates must be sorted descending by score');
+
+  // 2. Switching renter profile presets (commute vs value vs quality) measurably updates weights & scores
+  store.setProfile('commute');
+  const resComm = engine.evaluateAll(store.state, store);
+  store.setProfile('value');
+  const resVal = engine.evaluateAll(store.state, store);
+  const lxComm = resComm.plateRowById.get('p-liuxian').fit.total;
+  const lxVal = resVal.plateRowById.get('p-liuxian').fit.total;
+  assert.notEqual(lxComm, lxVal, 'Switching commute vs value profile must change plate score');
+  store.setProfile('balanced');
+
+  // 3. Map renders score pills, Top 3 #1 crown badge, and score legend
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fakeSvg = {
+    attrs: {}, innerHTML: '', classList: { toggle() {} },
+    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {},
+    getBoundingClientRect() { return { width: 1200, height: 700, left: 0, top: 0 }; },
+    querySelector() { return null; },
+  };
+  const map = ctx.createV3Map(fakeSvg, atlas, engine, timing, esc);
+  const scoreLegend = map.render({ state: store.state, evalResult: resBal, store });
+  assert.match(fakeSvg.innerHTML, /class="score-pill"/, 'Score view should draw score pills on banners');
+  assert.match(fakeSvg.innerHTML, /class="rank-crown"/, 'Score view should render Top 3 crown badges');
+  assert.match(scoreLegend, /综合推荐分/);
+
+  // 4. Multi-room "一房一卡" true all-in monthly cost + red-flag -12 penalty + PK ranking
+  const roomGood = store.saveRoom({
+    plateId: 'p-pingzhou', plateName: '坪洲', title: '碧海湾 3栋802',
+    housingType: '电梯小区', areaSqm: 38, walkMin: 6,
+    rent: 2800, mgmtFee: 180, netFee: 50, utilityMode: 'civil', agencyFee: 0,
+    redFlags: [],
+    stars: { light: 5, quiet: 4, appliance: 5, walk: 4, life: 5, landlord: 5 },
+    note: '南向采光好，民水民电',
+  });
+  const roomTrap = store.saveRoom({
+    plateId: 'p-pingzhou', plateName: '坪洲', title: '坪洲某公寓 205',
+    housingType: '品牌公寓', areaSqm: 28, walkMin: 8,
+    rent: 2600, mgmtFee: 200, netFee: 100, utilityMode: 'commercial', agencyFee: 1200,
+    redFlags: ['dark_window', 'damp_pest'],
+    stars: { light: 2, quiet: 2, appliance: 3, walk: 3, life: 4, landlord: 3 },
+    note: '表面便宜但商水商电+管理费+握手楼',
+  });
+  assert.ok(roomGood && roomTrap);
+
+  const resRooms = engine.evaluateAll(store.state, store);
+  assert.equal(resRooms.scoredRooms.length, 2);
+  const gScored = resRooms.scoredRooms.find(r => r.id === roomGood.id);
+  const tScored = resRooms.scoredRooms.find(r => r.id === roomTrap.id);
+  assert.equal(gScored.trueMonthly, 2800 + 180 + 50);
+  assert.equal(gScored.hiddenMonthly, 230);
+  assert.equal(tScored.trueMonthly, 2600 + 200 + 100 + 220 + 100); // commercial +220, agency 1200/12=+100
+  assert.equal(tScored.hiddenMonthly, 620);
+  assert.equal(tScored.redFlagPenalty, 24);
+  assert.equal(resRooms.scoredRooms[0].id, roomGood.id, 'Clean civil-utility room must beat cheaper-looking red-flag trap room in PK');
+  assert.equal(resRooms.plateRowById.get('p-pingzhou').fit.verified, true, 'Logging a real inspected room upgrades parent plate score to verified');
+
+  // 5. JSON backup export & import preserves BOTH legacy journal entries AND V5 rooms losslessly
+  store.toggleSave('p-xilicenter', '西丽中心片区');
+  const backupJson = store.exportBackup();
+  const boot2 = bootV3();
+  const mergedCount = boot2.store.importBackup(backupJson);
+  assert.ok(mergedCount >= 3);
+  assert.equal(boot2.store.isSaved('p-xilicenter'), true);
+  assert.equal(boot2.store.listRooms().length, 2);
+  assert.equal(boot2.store.listRooms().find(r => r.title === '碧海湾 3栋802').mgmtFee, 180);
+
+  store.deleteRoom(roomTrap.id);
+  assert.equal(store.listRooms().length, 1);
+});
+
 test('V3 store losslessly preserves legacy shenzhen-rent-atlas.journal.v1 bookmarks & notes', () => {
   const legacy = JSON.stringify({
     format: 'shenzhen-rent-journal', version: 1, chosenId: 'nsguanlong',
@@ -310,32 +396,31 @@ test('V3 store losslessly preserves legacy shenzhen-rent-atlas.journal.v1 bookma
   assert.equal(store.getEntry('nsguanlong').note, '旧版踩点笔记');
 });
 
-test('Built index.html has lossless packed driving matrix, valid JS syntax, strict CSP, and zero missing DOM IDs', () => {
+test('Built index.html has lossless packed driving matrix, valid JS syntax, strict CSP, 60fps zero-filter SVG & zero missing DOM IDs', () => {
   const html = read('index.html');
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /viewport-fit=cover/, 'Mobile HTML should support notched screen safe areas');
   assert.match(html, /height:\s*100dvh/, 'Mobile layout should use dynamic viewport height (100dvh)');
   assert.match(html, /env\(safe-area-inset-bottom\)/, 'Mobile bottom dock & sheet should respect iOS safe-area-inset-bottom');
-  assert.match(html, /@media \(hover: none\)/, 'Touch devices should suppress ghost desktop hover card');
-  assert.match(html, /sheet-handle/, 'Mobile bottom sheet should include drag handle');
   assert.match(html, /id="atlas-v3-data"/);
-  assert.match(html, /id="commute-hub"/);
-  assert.match(html, /id="req-pop"/);
-  assert.match(html, /id="hover-card"/);
-  assert.doesNotMatch(html, /\.plate-shape:hover\s*\{[^}]*stroke:/, 'Hovering subdivided plates must never apply stroke (prevents stray Voronoi lines)');
-  assert.match(html, /#atlas-svg :focus \{ outline: none; \}/);
-  assert.match(html, /#atlas-svg text\.no-stroke \{ stroke: none;/);
+  assert.match(html, /id="nx-sheet"/);
+  assert.match(html, /id="nx-mobile-tabs"/);
+  assert.match(html, /#nx-svg :focus \{ outline: none; \}/);
+  assert.match(html, /#nx-svg text\.no-stroke \{ stroke: none;/);
+  assert.doesNotMatch(html, /zu\.ke\.com|ziroom\.com|leyoujia\.com|inboyu\.com/, 'Flagship UI must not embed third-party commercial rental platform referral deep-links');
 
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-  assert.equal(scripts.length, 2);
-  scripts.forEach((src, i) => new vm.Script(src, { filename: `v3-inline-${i}.js` }));
+  assert.ok(scripts.length >= 1);
+  scripts.forEach((src, i) => new vm.Script(src, { filename: `flagship-inline-${i}.js` }));
 
-  // Verify lossless packed driving matrix decode
+  // Verify lossless gzip-packed driving matrix & lazy bus network decode
+  const zlib = require('node:zlib');
   const jMatch = html.match(/<script type="application\/json" id="journey-data">([\s\S]*?)<\/script>/);
   const embedded = JSON.parse(jMatch[1]);
-  assert.ok(embedded.driving?.packed?.durations);
-  const unpack = (b64, n) => {
-    const buf = Buffer.from(b64, 'base64'), rows = new Array(n);
+  assert.ok(embedded.driving?.packed?.durations && embedded.driving.packed.gz === true, 'Driving matrix should be gzip-packed');
+  assert.ok(embedded.bus?.gz, 'Bus network should be gzip-packed for lazy decompression');
+  const unpack = (buf, n) => {
+    const rows = new Array(n);
     let p = 0;
     for (let i = 0; i < n; i++) {
       const row = new Int32Array(n); let prev = 0;
@@ -349,18 +434,68 @@ test('Built index.html has lossless packed driving matrix, valid JS syntax, stri
     }
     return rows;
   };
-  const decDur = unpack(embedded.driving.packed.durations, embedded.driving.packed.n);
+  const durBytes = zlib.gunzipSync(Buffer.from(embedded.driving.packed.durations, 'base64'));
+  const decDur = unpack(durBytes, embedded.driving.packed.n);
   assert.equal(decDur.length, travel.driving.durations.length);
   for (let i = 0; i < decDur.length; i += 17) {
     assert.deepEqual(Array.from(decDur[i]), travel.driving.durations[i]);
   }
+  const decBus = JSON.parse(zlib.gunzipSync(Buffer.from(embedded.bus.gz, 'base64')).toString('utf8'));
+  assert.equal(decBus.stops.length, travel.bus.stops.length);
+  assert.equal(decBus.routes.length, travel.bus.routes.length);
+  assert.equal(atlas.streetClips.length, 0, 'Pre-clipped Voronoi plates should eliminate all runtime SVG clipPaths');
+  assert.doesNotMatch(html, /<feMorphology|<feDropShadow/, 'CPU SVG filters feMorphology and feDropShadow must be eliminated for 60fps pan/zoom');
+});
 
-  // Verify all queried static DOM IDs exist
+test('V6 engine lazily decompresses gzipped driving & bus payloads on demand via DecompressionStream', async () => {
+  const html = read('index.html');
+  const jMatch = html.match(/<script type="application\/json" id="journey-data">([\s\S]*?)<\/script>/);
+  const packedTravel = JSON.parse(jMatch[1]);
+  const ctx = vm.createContext({
+    window: {}, atob, DecompressionStream, Response, TextDecoder,
+    requestAnimationFrame: fn => { fn(); return 1; },
+    localStorage: { getItem: () => null, setItem() {} },
+  });
+  ctx.window = ctx;
+  for (const f of ['app/rail.js', 'app/bus.js', 'app/store.js', 'app/engine.js']) {
+    vm.runInContext(read(f), ctx);
+  }
+  const store = ctx.createV3Store(() => {});
+  const engine = ctx.createV3Engine(atlas, packedTravel, timing);
+  assert.equal(engine.isModeReady('rail'), true);
+  assert.equal(engine.isModeReady('drive'), false);
+  assert.equal(engine.isModeReady('bus'), false);
+
+  store.state.work = '科兴科学园';
+  store.state.mode = 'drive';
+  assert.equal(await engine.ensureModeReady('drive'), true);
+  assert.equal(engine.isModeReady('drive'), true);
+  const driveRes = engine.evaluateAll(store.state, store);
+  assert.ok(driveRes.plateRowById.get('p-pingzhou').route.minutes > 5, 'Lazy-decoded driving matrix should compute Pingzhou->Kexing');
+
+  store.state.mode = 'bus';
+  assert.equal(await engine.ensureModeReady('bus'), true);
+  assert.equal(engine.isModeReady('bus'), true);
+  const busRes = engine.evaluateAll(store.state, store);
+  assert.ok(busRes.plateRowById.get('p-pingzhou').route.minutes > 10, 'Lazy-decoded bus network should compute Pingzhou->Kexing');
+});
+
+test('V6 check: all static DOM IDs exist in flagship index.html & legacy template', () => {
+  const html = read('index.html');
   const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
-  const ui = read('app/ui.js');
-  const dynamicIds = new Set(['place-note-form', 'btn-export-wl', 'input-import-wl']);
-  for (const m of ui.matchAll(/\$\('#([\w-]+)'\)|getElementById\('([\w-]+)'\)/g)) {
+  const nextUi = read('app/next/next-ui.js');
+  const nextDynamicIds = new Set(['nx-btn-export', 'nx-input-import']);
+  for (const m of nextUi.matchAll(/\$\('#([\w-]+)'\)|getElementById\('([\w-]+)'\)/g)) {
     const id = m[1] || m[2];
-    if (!dynamicIds.has(id)) assert.ok(htmlIds.has(id), `Missing DOM id #${id} in app/template.html`);
+    if (!nextDynamicIds.has(id)) assert.ok(htmlIds.has(id), `Missing DOM id #${id} in flagship index.html`);
+  }
+
+  const legacyTpl = read('app/template.html');
+  const legacyIds = new Set([...legacyTpl.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+  const legacyUi = read('app/ui.js');
+  const legacyDynamicIds = new Set(['place-note-form', 'btn-export-wl', 'input-import-wl']);
+  for (const m of legacyUi.matchAll(/\$\('#([\w-]+)'\)|getElementById\('([\w-]+)'\)/g)) {
+    const id = m[1] || m[2];
+    if (!legacyDynamicIds.has(id)) assert.ok(legacyIds.has(id), `Missing DOM id #${id} in legacy app/template.html`);
   }
 });

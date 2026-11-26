@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ebe0c5">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>深圳租房 · 探索地图</title>
+<style>{{app/next/next.css}}</style>
+</head>
+<body>
+
+<div id="app-shell" class="app-shell" data-active-mob-tab="map">
+  <!-- 全屏边缘到边缘地图舞台（塞尔达旷野色块画风） -->
+  <main id="nx-stage" class="nx-stage">
+    <svg id="nx-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房探索地图"></svg>
+
+    <!-- 侧栏收起时的左上极简唤起按钮（仅桌面收起态显示） -->
+    <button type="button" id="nx-side-open" class="nx-float-icon nx-side-open" hidden title="展开列表" aria-label="展开左侧列表">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3" width="13.6" height="12" rx="2.5"/><path d="M6.8 3v12"/></svg>
+    </button>
+
+    <!-- 桌面左侧悬浮毛玻璃面板（Apple Maps macOS 风格）/ 手机端顶部浮窗 + 列表容器 -->
+    <aside id="nx-sheet" class="nx-sheet" aria-label="搜索、推荐与看房对比">
+      <div class="nx-sheet-top">
+        <!-- 品牌行 + 市场/保租 轻分段 + 桌面收起按钮 -->
+        <div class="nx-sheet-brand-row">
+          <div class="nx-brand-left">
+            <span class="nx-brand">深圳租房</span>
+            <div class="nx-seg nx-seg-sm" id="nx-track-seg" role="group" aria-label="房源类别">
+              <button type="button" data-track="market" aria-pressed="true">市场房</button>
+              <button type="button" data-track="affordable" aria-pressed="false">保租房</button>
+            </div>
+          </div>
+          <div class="nx-brand-right">
+            <button type="button" id="nx-cond-toggle-mob" class="nx-quiet-btn nx-only-mob" aria-expanded="false">筛选</button>
+            <button type="button" id="nx-side-close" class="nx-icon-btn nx-only-desk" title="收起侧栏" aria-label="收起侧栏">
+              <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3" width="13.6" height="12" rx="2.5"/><path d="M6.8 3v12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 原生风格搜索框 -->
+        <div class="nx-search-wrap" id="nx-search-wrap">
+          <div class="nx-search-field" id="nx-search-box">
+            <svg class="nx-search-ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M10.7 10.7 14 14"/></svg>
+            <input id="nx-omni-input" type="text" autocomplete="off" placeholder="搜索公司、园区、地铁站或片区">
+            <button type="button" id="nx-search-clear" class="nx-clear-btn" hidden aria-label="清除搜索">×</button>
+          </div>
+          <div id="nx-omni-pop" class="nx-omni-pop" hidden></div>
+        </div>
+
+        <!-- 未设工作地：静默一行高频园区快捷入口 -->
+        <div id="nx-quick-row" class="nx-quick-row">
+          <div id="nx-quick-dests" class="nx-quick-dests"></div>
+        </div>
+
+        <!-- 已设工作地 / 通勤与筛选条件快捷入口（明显可点击胶囊，点击展开调参面板） -->
+        <div id="nx-cond-bar" class="nx-cond-bar">
+          <div id="nx-work-tag" class="nx-work-tag" hidden></div>
+          <button type="button" id="nx-cond-trigger" class="nx-cond-trigger" aria-expanded="false" title="点击修改出行方式、通勤上限、面积与预算">
+            <svg class="nx-cond-ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.2h11M2.5 8h11M2.5 11.8h11"/><circle cx="5.5" cy="4.2" r="1.5" fill="currentColor"/><circle cx="10.5" cy="8" r="1.5" fill="currentColor"/><circle cx="6.8" cy="11.8" r="1.5" fill="currentColor"/></svg>
+            <span id="nx-cond-summary" class="nx-cond-summary">地铁 · 平峰 · ≤50分</span>
+            <svg class="nx-cond-chev" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+          </button>
+        </div>
+
+        <!-- 可折叠通勤与居住条件面板（原生表单节奏） -->
+        <div id="nx-cond-panel" class="nx-cond-panel" hidden>
+          <div class="nx-cond-row">
+            <span class="nx-cond-lbl">出行</span>
+            <div class="nx-seg nx-seg-fill" id="nx-mode-seg" role="group" aria-label="出行方式">
+              <button type="button" data-mode="rail" aria-pressed="true">地铁</button>
+              <button type="button" data-mode="bus" aria-pressed="false">公交</button>
+              <button type="button" data-mode="drive" aria-pressed="false">驾车</button>
+            </div>
+            <div class="nx-seg" id="nx-peak-seg" role="group" aria-label="时段">
+              <button type="button" data-peak="0" aria-pressed="true">平峰</button>
+              <button type="button" data-peak="1" aria-pressed="false">早高峰</button>
+            </div>
+          </div>
+
+          <div class="nx-cond-row">
+            <span class="nx-cond-lbl">时长上限</span>
+            <input id="nx-limit-range" class="nx-slider" type="range" min="15" max="90" step="5" value="50" aria-label="单程通勤上限">
+            <strong id="nx-limit-readout" class="nx-num-val">50分</strong>
+          </div>
+
+          <div class="nx-cond-row nx-cond-row-stack">
+            <div class="nx-cond-head">
+              <span class="nx-cond-lbl">面积与预算</span>
+              <button type="button" id="nx-reset-all" class="nx-link-quiet">重置条件</button>
+            </div>
+            <div class="nx-cond-inputs">
+              <label class="nx-inline-input">
+                <input id="nx-sqm-input" type="number" min="10" max="260" step="5" placeholder="面积不限">
+                <span>㎡</span>
+              </label>
+              <label class="nx-inline-input">
+                <input id="nx-budget-input" type="number" min="500" max="100000" step="100" placeholder="预算上限">
+                <span>元</span>
+              </label>
+            </div>
+            <div class="nx-quick-sqm" id="nx-sqm-chips">
+              <button type="button" data-sqm-quick="0">单价</button>
+              <button type="button" data-sqm-quick="25">25㎡</button>
+              <button type="button" data-sqm-quick="35">35㎡</button>
+              <button type="button" data-sqm-quick="50">50㎡</button>
+              <button type="button" data-sqm-quick="70">70㎡</button>
+            </div>
+          </div>
+
+          <details class="nx-work2-fold">
+            <summary>备选工作地（兼顾下一份工作）</summary>
+            <div class="nx-cond-inputs" style="margin-top:8px">
+              <label class="nx-inline-input">
+                <input id="nx-work2-input" type="text" list="nx-dest-options" autocomplete="off" placeholder="如 企鹅岛">
+              </label>
+              <label class="nx-inline-input" style="max-width:110px">
+                <input id="nx-limit2-input" type="number" min="10" max="120" step="5" placeholder="上限">
+                <span>分</span>
+              </label>
+            </div>
+          </details>
+        </div>
+
+        <!-- 桌面侧栏主切换（原生 Apple Segmented Control） -->
+        <div class="nx-main-seg-wrap nx-only-desk" id="nx-side-tabs-wrap">
+          <div class="nx-seg nx-seg-fill" id="nx-side-tabs" role="tablist">
+            <button type="button" data-side-tab="top" aria-pressed="true">推荐片区</button>
+            <button type="button" data-side-tab="pk" aria-pressed="false">看房 PK <span id="nx-pk-count" class="nx-inline-count">0</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 面板滚动内容区（桌面：推荐流 / PK流 / 详情；手机端 Top/PK Tab 复用此内容区） -->
+      <div id="nx-sheet-body" class="nx-sheet-body">
+        <div id="nx-top-view" class="nx-view"></div>
+        <div id="nx-pk-view" class="nx-view" hidden></div>
+        <div id="nx-detail-view" class="nx-view" hidden></div>
+      </div>
+    </aside>
+
+    <!-- 悬浮状态轻提示 & 桌面鼠标速览卡 -->
+    <div id="nx-toast" class="nx-toast" role="status" hidden></div>
+    <div id="nx-hover" class="nx-hover" hidden aria-hidden="true"></div>
+
+    <!-- 地图右上角悬浮图层与时间圈入口（Apple Maps 极简布局） -->
+    <div class="nx-map-top-right">
+      <button type="button" id="nx-radial-btn" class="nx-glass-pill" hidden aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg>
+        <span>10分圈</span>
+      </button>
+      <div class="nx-pop-anchor">
+        <button type="button" id="nx-more-btn" class="nx-glass-pill" aria-expanded="false">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.2 14 5.5 8 8.8 2 5.5z"/><path d="m2 8.6 6 3.3 6-3.3"/><path d="m2 11.4 6 3.3 6-3.3"/></svg>
+          <span>图层</span>
+          <i id="nx-more-dot" class="nx-dot" hidden></i>
+        </button>
+        <div id="nx-more-pop" class="nx-more-pop" hidden></div>
+      </div>
+    </div>
+
+    <!-- 地图底部居中极简视图切换 + 静默单行图例 -->
+    <div class="nx-map-bottom" id="nx-map-bottom">
+      <div id="nx-sub-row" class="nx-sub-row" hidden></div>
+      <div class="nx-bottom-glass">
+        <div class="nx-seg" id="nx-view-seg" role="group" aria-label="主视角">
+          <button type="button" data-fill-layer="score" aria-pressed="true">推荐</button>
+          <button type="button" data-fill-layer="rent" aria-pressed="false">租金</button>
+          <button type="button" data-fill-layer="commute" aria-pressed="false">通勤</button>
+        </div>
+        <div class="nx-seg" id="nx-aff-seg" role="group" aria-label="保租房阶段" hidden></div>
+        <span class="nx-bottom-sep" aria-hidden="true"></span>
+        <div id="nx-legend" class="nx-legend"></div>
+      </div>
+    </div>
+
+    <!-- 地图右下角原生缩放胶囊 -->
+    <div class="nx-zoom-pill" id="nx-zoom-box" aria-label="缩放">
+      <button type="button" data-zoom="in" title="放大" aria-label="放大">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3.2v9.6M3.2 8h9.6"/></svg>
+      </button>
+      <button type="button" data-zoom="out" title="缩小" aria-label="缩小">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3.2 8h9.6"/></svg>
+      </button>
+      <button type="button" data-zoom="reset" title="全深圳视野" aria-label="重置全城视野">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/></svg>
+      </button>
+    </div>
+
+    <!-- 手机端地图模式拖拽详情抽屉 -->
+    <section id="nx-mobile-sheet" class="nx-mobile-sheet" hidden aria-live="polite"></section>
+  </main>
+
+  <!-- 手机端原生毛玻璃底部三 Tab -->
+  <nav id="nx-mobile-tabs" class="nx-mobile-tabs" aria-label="底部导航">
+    <button type="button" data-mob-tab="map" aria-pressed="true">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5 7.5 3.5 12.5 5.5 17 3.5v11l-4.5 2-5-2-4.5 2z"/><path d="M7.5 3.5v11M12.5 5.5v11"/></svg>
+      <span>探索</span>
+    </button>
+    <button type="button" data-mob-tab="top" aria-pressed="false">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h12M4 10h12M4 14.5h8"/></svg>
+      <span>推荐</span>
+    </button>
+    <button type="button" data-mob-tab="pk" aria-pressed="false">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v14M4 7h12M6 7l-2.5 5h5zM14 7l-2.5 5h5zM7 17h6"/></svg>
+      <span>看房PK <em id="nx-mob-pk-badge" hidden>0</em></span>
+    </button>
+  </nav>
+
+  <datalist id="nx-dest-options"></datalist>
+</div>
+
+<script type="application/json" id="atlas-v3-data">{{data/atlas-v3.json}}</script>
+<script type="application/json" id="journey-data">{{data/journey.json}}</script>
+<script type="application/json" id="time-data">{{data/timing.json}}</script>
+<script>
+{{app/rail.js}}
+{{app/bus.js}}
+{{app/map-camera.js}}
+{{app/store.js}}
+{{app/engine.js}}
+{{app/next/themes.js}}
+{{app/next/next-map.js}}
+{{app/next/next-ui.js}}
+</script>
+</body>
+</html>
