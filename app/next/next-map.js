@@ -60,7 +60,7 @@
       const c = ch.charCodeAt(0);
       if (ch === '%') total += fontSize * 0.90;
       else if ('(),.· '.includes(ch)) total += fontSize * 0.42;
-      else if (c < 128 || '¥–↑↓↘◆◈✈★✓/+-'.includes(ch)) total += fontSize * 0.64;
+      else if (c < 128 || '¥–↑↓↘◆◈★✓/+-'.includes(ch)) total += fontSize * 0.64;
       else total += fontSize * 1.03;
     }
     return total;

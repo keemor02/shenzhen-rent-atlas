@@ -127,6 +127,18 @@ test('Built next.html obeys 3-tab bottom bar, strict compliance, valid JS syntax
 
   const nextSources = ['themes.js', 'next-map.js', 'next-ui.js', 'template.html', 'next.css'].map(f => read('app/next/' + f)).join('\n');
   assert.doesNotMatch(nextSources, /zu\.ke\.com|ziroom\.com|leyoujia\.com|inboyu\.com|万科泊寓|龙湖冠寓|魔方公寓|微棠新青年|multiSourceRents/, 'Consumer UI must strictly exclude commercial platform links & brand-store quotes');
+  assert.doesNotMatch(nextSources + '\n' + read('app/store.js'), /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2607}-\u{260F}\u{2614}-\u{26FF}\u{2700}-\u{2712}\u{2714}-\u{27BF}\u{FE0F}]/u, 'Consumer UI & store must strictly avoid system color emojis');
+
+  // Brand lockup, reserved multi-city slot, inline offline SVG favicon & pure-vector icon.svg
+  const iconSvg = read('icon.svg');
+  assert.match(iconSvg, /^<svg[^>]+viewBox="0 0 512 512"/);
+  assert.ok(Buffer.byteLength(iconSvg, 'utf8') <= 1536, 'icon.svg should remain lightweight pure vector (< 1.5 KB)');
+  assert.doesNotMatch(iconSvg, /<image|xlink:href|data:image\/png/i, 'icon.svg must be 100% pure vector');
+  assert.match(html, /<link rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,/, 'Offline HTML must embed inline data-URI SVG favicon');
+  assert.match(html, /<title>租房地图 · 深圳<\/title>/);
+  assert.match(html, /class="nx-brand-ico"/);
+  assert.match(html, /<span class="nx-brand">租房地图<\/span>/);
+  assert.match(html, /id="nx-city-slot"[^>]*>深圳<\/span>/);
 
   const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
   const ui = read('app/next/next-ui.js');

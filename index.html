@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="租房地图">
 <meta name="theme-color" content="#ebe0c5">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>深圳租房 · 探索地图</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Cdefs%3E%3CclipPath%20id='w'%3E%3Cpath%20d='M122,226%20A134,134%200%200,1%20390,226%20L390,378%20C390,390%20380,400%20368,400%20L144,400%20C132,400%20122,390%20122,378%20Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20width='512'%20height='512'%20rx='112'%20fill='%23357443'/%3E%3Cg%20clip-path='url(%23w)'%3E%3Crect%20x='116'%20y='86'%20width='280'%20height='320'%20fill='%23f5e9cb'/%3E%3Ccircle%20cx='308'%20cy='186'%20r='64'%20fill='%23e8b856'/%3E%3Cpath%20d='M110,334%20Q194,274%20282,318%20T410,304%20L410,410%20L110,410%20Z'%20fill='%236ab06e'/%3E%3Crect%20x='116'%20y='346'%20width='280'%20height='60'%20fill='%23d9785f'/%3E%3Cg%20fill='%23231f1b'%3E%3Ccircle%20cx='192'%20cy='222'%20r='30'/%3E%3Cpath%20d='M164,218%20C154,224%20152,236%20160,242%20C166,246%20174,240%20174,232%20Z'/%3E%3Cpath%20d='M174,250%20C150,256%20138,284%20142,322%20L144,352%20L274,352%20C282,352%20284,340%20276,334%20L256,320%20C260,296%20250,278%20232,278%20C222,278%20214,284%20208,292%20L202,262%20C198,252%20186,248%20174,250%20Z'/%3E%3Ccircle%20cx='332'%20cy='306'%20r='15'/%3E%3Cpath%20d='M320,298%20L322,283%20L331,293%20Z%20M344,298%20L342,283%20L333,293%20Z'/%3E%3Cpath%20d='M316,348%20C316,326%20322,316%20333,316%20C344,316%20350,328%20350,348%20Z'/%3E%3Cpath%20d='M348,342%20C364,342%20368,326%20360,318'%20fill='none'%20stroke='%23231f1b'%20stroke-width='7'%20stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3Cpath%20d='M122,226%20A134,134%200%200,1%20390,226%20L390,378%20C390,390%20380,400%20368,400%20L144,400%20C132,400%20122,390%20122,378%20Z'%20fill='none'%20stroke='%23fffdf8'%20stroke-width='18'%20stroke-linejoin='round'/%3E%3Cline%20x1='100'%20y1='400'%20x2='412'%20y2='400'%20stroke='%23fffdf8'%20stroke-width='20'%20stroke-linecap='round'/%3E%3C/svg%3E">
+<title>租房地图 · 深圳</title>
 <style>/* 深圳租房新版 UI：Apple Maps 原生毛玻璃极简界面 × 塞尔达旷野色块全屏地图 */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
@@ -220,14 +222,36 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: 8px;
 }
-.nx-brand-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.nx-brand-right { display: flex; align-items: center; gap: 4px; }
+.nx-brand-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nx-brand-lockup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0; }
+.nx-brand-ico {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  display: block;
+  box-shadow: 0 1px 3px rgba(34, 26, 15, 0.16);
+}
+.nx-brand-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .nx-brand {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--fg);
   white-space: nowrap;
+}
+.nx-city-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--fill-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 搜索输入框（原生 recessed gray 质感，无生硬粗框） */
@@ -1455,6 +1479,12 @@ a:hover { text-decoration: underline; }
     pointer-events: auto !important;
   }
   .nx-sheet-top { padding: 10px 12px; gap: 8px; border-bottom: 0; }
+  .nx-brand-left { gap: 6px; }
+  .nx-brand-lockup { gap: 5px; }
+  .nx-brand-ico { width: 22px; height: 22px; border-radius: 5.5px; }
+  .nx-brand { font-size: 14.5px; }
+  .nx-city-pill { padding: 1.5px 5px; font-size: 10.5px; }
+  .nx-seg-sm button { padding: 3px 6.5px; font-size: 11px; }
   .app-shell[data-active-mob-tab="map"] .nx-sheet-body { display: none; }
 
   /* 推荐 / 看房PK 态：全屏原生白色页面覆盖地图 */
@@ -1569,7 +1599,7 @@ a:hover { text-decoration: underline; }
 <div id="app-shell" class="app-shell" data-active-mob-tab="map">
   <!-- 全屏边缘到边缘地图舞台（塞尔达旷野色块画风） -->
   <main id="nx-stage" class="nx-stage">
-    <svg id="nx-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="深圳租房探索地图"></svg>
+    <svg id="nx-svg" tabindex="0" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="租房地图 · 深圳"></svg>
 
     <!-- 侧栏收起时的左上极简唤起按钮（仅桌面收起态显示） -->
     <button type="button" id="nx-side-open" class="nx-float-icon nx-side-open" hidden title="展开列表" aria-label="展开左侧列表">
@@ -1582,7 +1612,31 @@ a:hover { text-decoration: underline; }
         <!-- 品牌行 + 市场/保租 轻分段 + 桌面收起按钮 -->
         <div class="nx-sheet-brand-row">
           <div class="nx-brand-left">
-            <span class="nx-brand">深圳租房</span>
+            <div class="nx-brand-lockup">
+              <svg class="nx-brand-ico" width="24" height="24" viewBox="0 0 512 512" aria-hidden="true">
+                <defs><clipPath id="nx-brand-win"><path d="M122,226 A134,134 0 0,1 390,226 L390,378 C390,390 380,400 368,400 L144,400 C132,400 122,390 122,378 Z"/></clipPath></defs>
+                <rect width="512" height="512" rx="112" fill="#357443"/>
+                <g clip-path="url(#nx-brand-win)">
+                  <rect x="116" y="86" width="280" height="320" fill="#f5e9cb"/>
+                  <circle cx="308" cy="186" r="64" fill="#e8b856"/>
+                  <path d="M110,334 Q194,274 282,318 T410,304 L410,410 L110,410 Z" fill="#6ab06e"/>
+                  <rect x="116" y="346" width="280" height="60" fill="#d9785f"/>
+                  <g fill="#231f1b">
+                    <circle cx="192" cy="222" r="30"/>
+                    <path d="M164,218 C154,224 152,236 160,242 C166,246 174,240 174,232 Z"/>
+                    <path d="M174,250 C150,256 138,284 142,322 L144,352 L274,352 C282,352 284,340 276,334 L256,320 C260,296 250,278 232,278 C222,278 214,284 208,292 L202,262 C198,252 186,248 174,250 Z"/>
+                    <circle cx="332" cy="306" r="15"/>
+                    <path d="M320,298 L322,283 L331,293 Z M344,298 L342,283 L333,293 Z"/>
+                    <path d="M316,348 C316,326 322,316 333,316 C344,316 350,328 350,348 Z"/>
+                    <path d="M348,342 C364,342 368,326 360,318" fill="none" stroke="#231f1b" stroke-width="7" stroke-linecap="round"/>
+                  </g>
+                </g>
+                <path d="M122,226 A134,134 0 0,1 390,226 L390,378 C390,390 380,400 368,400 L144,400 C132,400 122,390 122,378 Z" fill="none" stroke="#fffdf8" stroke-width="18" stroke-linejoin="round"/>
+                <line x1="100" y1="400" x2="412" y2="400" stroke="#fffdf8" stroke-width="20" stroke-linecap="round"/>
+              </svg>
+              <span class="nx-brand">租房地图</span>
+              <span class="nx-city-pill" id="nx-city-slot" title="当前城市：深圳（后续扩展多城切换）">深圳</span>
+            </div>
             <div class="nx-seg nx-seg-sm" id="nx-track-seg" role="group" aria-label="房源类别">
               <button type="button" data-track="market" aria-pressed="true">市场房</button>
               <button type="button" data-track="affordable" aria-pressed="false">保租房</button>
@@ -4087,7 +4141,7 @@ function makeMapCamera(svg, world, repaint, enabled=()=>true, fastTransform=null
       const c = ch.charCodeAt(0);
       if (ch === '%') total += fontSize * 0.90;
       else if ('(),.· '.includes(ch)) total += fontSize * 0.42;
-      else if (c < 128 || '¥–↑↓↘◆◈✈★✓/+-'.includes(ch)) total += fontSize * 0.64;
+      else if (c < 128 || '¥–↑↓↘◆◈★✓/+-'.includes(ch)) total += fontSize * 0.64;
       else total += fontSize * 1.03;
     }
     return total;

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><clipPath id="w"><path d="M122 226A134 134 0 0 1 390 226V378c0 12-10 22-22 22H144c-12 0-22-10-22-22Z"/></clipPath></defs>
+<rect width="512" height="512" rx="112" fill="#357443"/>
+<g clip-path="url(#w)">
+<rect x="116" y="86" width="280" height="320" fill="#f5e9cb"/>
+<circle cx="308" cy="186" r="64" fill="#e8b856"/>
+<path d="M110 334Q194 274 282 318T410 304V410H110Z" fill="#6ab06e"/>
+<rect x="116" y="346" width="280" height="60" fill="#d9785f"/>
+<g fill="#231f1b">
+<circle cx="192" cy="222" r="30"/>
+<path d="M164 218c-10 6-12 18-4 24 6 4 14-2 14-10Z"/>
+<path d="M174 250c-24 6-36 34-32 72l2 30h130c8 0 10-12 2-18l-20-14c4-24-6-42-24-42-10 0-18 6-24 14l-6-30c-4-10-16-14-28-12Z"/>
+<circle cx="332" cy="306" r="15"/>
+<path d="M320 298l2-15 9 10Zm24 0l-2-15-9 10Z"/>
+<path d="M316 348c0-22 6-32 17-32s17 12 17 32Z"/>
+<path d="M348 342c16 0 20-16 12-24" fill="none" stroke="#231f1b" stroke-width="7" stroke-linecap="round"/>
+</g>
+</g>
+<path d="M122 226A134 134 0 0 1 390 226V378c0 12-10 22-22 22H144c-12 0-22-10-22-22Z" fill="none" stroke="#fffdf8" stroke-width="18" stroke-linejoin="round"/>
+<line x1="100" y1="400" x2="412" y2="400" stroke="#fffdf8" stroke-width="20" stroke-linecap="round"/>
+</svg>

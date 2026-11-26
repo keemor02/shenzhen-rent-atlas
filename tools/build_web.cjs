@@ -13,27 +13,9 @@ const zlib = require('node:zlib');
 const ROOT = path.resolve(__dirname, '..');
 const SOURCE_HTML = path.join(ROOT, 'index.html');
 const DIST_DIR = path.join(ROOT, 'dist');
+const ICON_PATH = path.join(ROOT, 'icon.svg');
 
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <clipPath id="tile"><rect x="24" y="24" width="464" height="464" rx="108"/></clipPath>
-  </defs>
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="#ebe0c5"/>
-  <g clip-path="url(#tile)">
-    <path d="M24 24H292L224 246L24 304Z" fill="#6ab06e"/>
-    <path d="M292 24H488V232L224 246Z" fill="#6cb8cf"/>
-    <path d="M24 304L224 246L344 488H24Z" fill="#a8c973"/>
-    <path d="M224 246L488 232V488H344Z" fill="#e4d6b5"/>
-    <path d="M292 24L224 246M24 304L224 246L488 232M224 246L344 488" fill="none" stroke="#594834" stroke-width="10" stroke-opacity="0.32"/>
-  </g>
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="none" stroke="#594834" stroke-opacity="0.22" stroke-width="8"/>
-  <g transform="translate(256 268)">
-    <path d="M0 122C-66 44 -104 -6 -104 -62C-104 -119 -57 -166 0 -166C57 -166 104 -119 104 -62C104 -6 66 44 0 122Z" fill="#1d1d1f" stroke="#fbfbf9" stroke-width="14" stroke-linejoin="round"/>
-    <path d="M-46 -46L0 -86L46 -46V2H-46Z" fill="#f2b838"/>
-    <rect x="-14" y="-32" width="28" height="34" rx="6" fill="#1d1d1f"/>
-  </g>
-</svg>
-`;
+const ICON_SVG = fs.readFileSync(ICON_PATH, 'utf8').replace(/\r\n/g, '\n');
 
 function buildManifest() {
   return JSON.stringify({

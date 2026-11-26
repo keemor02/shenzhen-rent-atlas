@@ -209,14 +209,36 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: 8px;
 }
-.nx-brand-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.nx-brand-right { display: flex; align-items: center; gap: 4px; }
+.nx-brand-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nx-brand-lockup { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0; }
+.nx-brand-ico {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  display: block;
+  box-shadow: 0 1px 3px rgba(34, 26, 15, 0.16);
+}
+.nx-brand-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .nx-brand {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--fg);
   white-space: nowrap;
+}
+.nx-city-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--fill-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 搜索输入框（原生 recessed gray 质感，无生硬粗框） */
@@ -1444,6 +1466,12 @@ a:hover { text-decoration: underline; }
     pointer-events: auto !important;
   }
   .nx-sheet-top { padding: 10px 12px; gap: 8px; border-bottom: 0; }
+  .nx-brand-left { gap: 6px; }
+  .nx-brand-lockup { gap: 5px; }
+  .nx-brand-ico { width: 22px; height: 22px; border-radius: 5.5px; }
+  .nx-brand { font-size: 14.5px; }
+  .nx-city-pill { padding: 1.5px 5px; font-size: 10.5px; }
+  .nx-seg-sm button { padding: 3px 6.5px; font-size: 11px; }
   .app-shell[data-active-mob-tab="map"] .nx-sheet-body { display: none; }
 
   /* 推荐 / 看房PK 态：全屏原生白色页面覆盖地图 */
